@@ -1,0 +1,9 @@
+go 1.23
+
+use (
+	application
+	cmd
+	domain
+	infrastructure
+	.
+)
