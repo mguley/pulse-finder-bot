@@ -1,0 +1,50 @@
+services:
+  proxy:
+    container_name: proxy
+    build:
+      dockerfile: docker/proxy/Dockerfile
+      context: .
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    networks:
+      bot_proxy_network:
+        ipv4_address: 211.45.0.4
+
+  terraform:
+    image: hashicorp/terraform:latest
+    container_name: terraform
+    volumes:
+      - ./terraform:/workspace
+      - ./remote/setup:/workspace/remote
+    working_dir: /workspace
+    entrypoint: ["/bin/sh", "-c", "apk update && apk add --no-cache rsync && tail -f /dev/null"]
+    networks:
+      bot_proxy_network:
+        ipv4_address: 211.45.0.10
+    environment:
+      - TF_LOG=TRACE
+
+  mongo:
+    container_name: mongo
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    volumes:
+      - bot_mongo_db:/data/db
+    networks:
+      bot_proxy_network:
+        ipv4_address: 211.45.0.5
+
+networks:
+  bot_proxy_network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 211.45.0.0/16
+
+volumes:
+  bot_mongo_db:
