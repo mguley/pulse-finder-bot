@@ -47,7 +47,7 @@ func (cmd *AuthenticateCommand) sendCommand() error {
 	}
 
 	writer := bufio.NewWriter(c)
-	command := fmt.Sprintf("AUTHENTICATE \"%s\"\n", cmd.c.GetPassword())
+	command := fmt.Sprintf("AUTHENTICATE %q\n", cmd.c.GetPassword())
 	bytesWritten, err := writer.WriteString(command)
 	if err != nil {
 		return fmt.Errorf("failed to send authentication command: %w", err)

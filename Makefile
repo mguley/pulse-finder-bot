@@ -66,5 +66,10 @@ tidy:
 	@echo 'Verifying infrastructure module dependencies...'
 	(cd ./infrastructure && go mod verify)
 
+	@echo 'Tidying tests module dependencies...'
+	(cd ./tests && go mod tidy)
+	@echo 'Verifying cmd module dependencies...'
+	(cd ./tests && go mod verify)
+
 	@echo 'Vendoring workspace dependencies...'
 	go work vendor
