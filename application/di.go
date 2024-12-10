@@ -12,6 +12,7 @@ import (
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
+	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
 }
 
@@ -37,6 +38,12 @@ func NewContainer() *Container {
 		InitFunc: func() *commands.AuthenticateCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
 			return commands.NewAuthenticateCommand(conn)
+		},
+	}
+	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
+		InitFunc: func() *commands.SignalCommand {
+			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
+			return commands.NewSignalCommand(conn, "NEWNYM")
 		},
 	}
 

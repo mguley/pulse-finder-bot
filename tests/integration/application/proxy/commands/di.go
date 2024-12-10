@@ -13,6 +13,7 @@ type TestContainer struct {
 	Config              dependency.LazyDependency[*config.Config]
 	ProxyConnection     dependency.LazyDependency[*port.Connection]
 	AuthenticateCommand dependency.LazyDependency[*commands.AuthenticateCommand]
+	SignalCommand       dependency.LazyDependency[*commands.SignalCommand]
 }
 
 // NewTestContainer initializes a new test container.
@@ -35,6 +36,11 @@ func NewTestContainer() *TestContainer {
 	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
 		InitFunc: func() *commands.AuthenticateCommand {
 			return commands.NewAuthenticateCommand(c.ProxyConnection.Get())
+		},
+	}
+	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
+		InitFunc: func() *commands.SignalCommand {
+			return commands.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
 		},
 	}
 
