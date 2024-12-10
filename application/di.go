@@ -3,6 +3,7 @@ package application
 import (
 	"application/config"
 	"application/dependency"
+	"application/proxy/commands"
 	"infrastructure"
 )
 
@@ -10,6 +11,7 @@ import (
 // It acts as a central registry for services, ensuring that dependencies are managed in a lazy loaded manner.
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
+	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
 }
 
@@ -27,6 +29,14 @@ func NewContainer() *Container {
 	c.InfrastructureContainer = dependency.LazyDependency[*infrastructure.Container]{
 		InitFunc: func() *infrastructure.Container {
 			return infrastructure.NewContainer(c.Config.Get())
+		},
+	}
+
+	// Proxy commands
+	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
+		InitFunc: func() *commands.AuthenticateCommand {
+			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
+			return commands.NewAuthenticateCommand(conn)
 		},
 	}
 
