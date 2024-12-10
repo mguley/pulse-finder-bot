@@ -1,0 +1,53 @@
+name: Integration Tests and Linters
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  run_tests_and_linters:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Run Docker Compose
+        run: docker-compose -f bot.yml up -d proxy
+
+      - name: Wait for Tor proxy to be ready
+        run: |
+          echo "Waiting for Tor proxy to be ready..."
+          until docker exec proxy curl --socks5-hostname 211.45.0.4:9050 https://check.torproject.org/ > /dev/null 2>&1; do
+            echo "Waiting for Tor proxy..."
+            sleep 5
+          done
+          echo "Tor proxy is ready."           
+
+      - name: Run Linters
+        run: |
+          make lint
+
+      - name: Run Integration Tests
+        run: |
+          make test/integration/no-cache
+
+      - name: Capture Tor proxy logs
+        if: always()
+        run: docker logs proxy
+
+      - name: Tear down Docker Compose
+        if: always()
+        run: docker-compose -f bot.yml down proxy
