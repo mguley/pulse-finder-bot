@@ -64,7 +64,7 @@ func LoadConfig() *Config {
 		},
 		SourceHandler: SourceHandlerConfig{
 			Alfa: SourceConfig{
-				SitemapURL: getEnv("SOURCE_ALFA_SITEMAP_URL", ""),
+				SitemapURL: getEnv("SOURCE_ALFA_SITEMAP_URL", "example.com"),
 			},
 			Beta: SourceConfig{
 				SitemapURL: getEnv("SOURCE_BETA_SITEMAP_URL", ""),
