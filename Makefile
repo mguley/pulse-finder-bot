@@ -73,3 +73,19 @@ tidy:
 
 	@echo 'Vendoring workspace dependencies...'
 	go work vendor
+
+# =============================================================================== #
+# TESTING
+# =============================================================================== #
+
+## test/integration: Run integration tests (uses Go's caching mechanism)
+.PHONY: test/integration
+test/integration:
+	@echo 'Running integration tests (with caching, sequentially)...'
+	go test -v -p=1 ./tests/integration/...
+
+## test/integration/no-cache: Run integration tests (bypass cache)
+.PHONY: test/integration/no-cache
+test/integration/no-cache:
+	@echo 'Running integration tests (no cache, sequentially)...'
+	go test -v -count=1 -p=1 ./tests/integration/...
