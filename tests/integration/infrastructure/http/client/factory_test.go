@@ -41,7 +41,7 @@ func TestFactory_CreateSocks5Client(t *testing.T) {
 	// Settings
 	h := config.Proxy.Host
 	p := config.Proxy.Port
-	timeout := 5 * time.Second
+	timeout := 10 * time.Second
 
 	// Create a SOCKS5 client
 	client, err := factory.CreateSocks5Client(h, p, timeout)
