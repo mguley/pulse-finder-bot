@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/commands"
 	"infrastructure"
+	"time"
 )
 
 // Container is a struct that holds all the dependencies for the application.
@@ -13,6 +14,7 @@ type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
+	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
 }
 
@@ -44,6 +46,16 @@ func NewContainer() *Container {
 		InitFunc: func() *commands.SignalCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
 			return commands.NewSignalCommand(conn, "NEWNYM")
+		},
+	}
+	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
+		InitFunc: func() *commands.StatusCommand {
+			f := c.InfrastructureContainer.Get().HttpFactory.Get()
+			s := c.InfrastructureContainer.Get().Socks5Client.Get()
+			h := c.Config.Get().Proxy.Host
+			p := c.Config.Get().Proxy.Port
+			t := 10 * time.Second
+			return commands.NewStatusCommand(h, p, s, f, t)
 		},
 	}
 
