@@ -77,6 +77,10 @@ func (c *Connection) Connect() error {
 
 // Close terminates the connection to the Proxy control port.
 func (c *Connection) Close() error {
+	if c.conn == nil {
+		return nil
+	}
+
 	if err := c.conn.Close(); err != nil {
 		return fmt.Errorf("could not close connection to %s: %w", c.address, err)
 	}
