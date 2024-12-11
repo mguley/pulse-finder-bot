@@ -22,7 +22,7 @@ func TestFactory_CreateDefaultClient(t *testing.T) {
 	// Validate the User-Agent is set
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://httpbin.org/ip", http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org?format=json", http.NoBody)
 	require.NoError(t, err, "Failed to create HTTP request")
 
 	resp, err := client.Do(req)
@@ -50,7 +50,7 @@ func TestFactory_CreateSocks5Client(t *testing.T) {
 	// Validate the User-Agent is set
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://httpbin.org/ip", http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org?format=json", http.NoBody)
 	require.NoError(t, err, "Failed to create HTTP request")
 
 	resp, err := client.Do(req)

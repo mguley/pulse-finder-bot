@@ -4,6 +4,7 @@ import (
 	"application/config"
 	"application/dependency"
 	"application/proxy/commands"
+	"application/proxy/services"
 	"infrastructure"
 	"time"
 )
@@ -12,6 +13,7 @@ import (
 // It acts as a central registry for services, ensuring that dependencies are managed in a lazy loaded manner.
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
+	ProxyService            dependency.LazyDependency[*services.Service]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -50,12 +52,23 @@ func NewContainer() *Container {
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
-			f := c.InfrastructureContainer.Get().HttpFactory.Get()
-			s := c.InfrastructureContainer.Get().Socks5Client.Get()
-			h := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
-			t := 10 * time.Second
-			return commands.NewStatusCommand(h, p, s, f, t)
+			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
+			client := c.InfrastructureContainer.Get().Socks5Client.Get()
+			host := c.Config.Get().Proxy.Host
+			port := c.Config.Get().Proxy.Port
+			timeout := 10 * time.Second
+			return commands.NewStatusCommand(host, port, client, factory, timeout)
+		},
+	}
+
+	// Proxy services
+	c.ProxyService = dependency.LazyDependency[*services.Service]{
+		InitFunc: func() *services.Service {
+			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
+			host := c.Config.Get().Proxy.Host
+			port := c.Config.Get().Proxy.Port
+			timeout := 10 * time.Second
+			return services.NewService(factory, host, port, timeout)
 		},
 	}
 
