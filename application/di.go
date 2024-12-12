@@ -16,6 +16,7 @@ type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
 	ProxyService            dependency.LazyDependency[*services.Service]
 	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
+	IdentityService         dependency.LazyDependency[*services.Identity]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -80,6 +81,17 @@ func NewContainer() *Container {
 			maxAttempts := 5
 			multiplier := 2.0
 			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
+		},
+	}
+	c.IdentityService = dependency.LazyDependency[*services.Identity]{
+		InitFunc: func() *services.Identity {
+			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
+			auth := c.AuthenticateCommand.Get()
+			signal := c.SignalCommand.Get()
+			status := c.StatusCommand.Get()
+			strategy := c.RetryStrategy.Get()
+			url := c.Config.Get().Proxy.PingUrl
+			return services.NewIdentity(conn, auth, signal, status, strategy, url)
 		},
 	}
 

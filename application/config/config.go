@@ -18,6 +18,7 @@ type ProxyConfig struct {
 	Port            string // Port is the port number of the Proxy server.
 	ControlPassword string // ControlPassword is the password for the Proxy control port.
 	ControlPort     string // ControlPort is the port number of the Proxy control port.
+	PingUrl         string // PingUrl is the URL used to check the proxy's status or connectivity.
 }
 
 // MongoDBConfig holds configuration settings for MongoDB.
@@ -52,6 +53,7 @@ func LoadConfig() *Config {
 			Port:            getEnv("PROXY_PORT", ""),
 			ControlPassword: getEnv("PROXY_CONTROL_PASSWORD", ""),
 			ControlPort:     getEnv("PROXY_CONTROL_PORT", ""),
+			PingUrl:         getEnv("PROXY_PING_URL", ""),
 		},
 		Mongo: MongoDBConfig{
 			Host:              getEnv("MONGO_HOST", ""),
