@@ -3,6 +3,7 @@ package application
 import (
 	"application/config"
 	"application/dependency"
+	"application/proxy/circuit"
 	"application/proxy/commands"
 	"application/proxy/services"
 	"application/proxy/strategies"
@@ -17,6 +18,7 @@ type Container struct {
 	ProxyService            dependency.LazyDependency[*services.Service]
 	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService         dependency.LazyDependency[*services.Identity]
+	CircuitManager          dependency.LazyDependency[*circuit.Manager]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -92,6 +94,11 @@ func NewContainer() *Container {
 			strategy := c.RetryStrategy.Get()
 			url := c.Config.Get().Proxy.PingUrl
 			return services.NewIdentity(conn, auth, signal, status, strategy, url)
+		},
+	}
+	c.CircuitManager = dependency.LazyDependency[*circuit.Manager]{
+		InitFunc: func() *circuit.Manager {
+			return circuit.NewManager(c.IdentityService.Get(), c.ProxyService.Get(), c.Config.Get().Proxy.PingUrl)
 		},
 	}
 
