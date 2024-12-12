@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/commands"
 	"application/proxy/services"
+	"application/proxy/strategies"
 	"infrastructure"
 	"time"
 )
@@ -14,6 +15,7 @@ import (
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
 	ProxyService            dependency.LazyDependency[*services.Service]
+	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -69,6 +71,15 @@ func NewContainer() *Container {
 			port := c.Config.Get().Proxy.Port
 			timeout := 10 * time.Second
 			return services.NewService(factory, host, port, timeout)
+		},
+	}
+	c.RetryStrategy = dependency.LazyDependency[strategies.RetryStrategy]{
+		InitFunc: func() strategies.RetryStrategy {
+			baseDelay := 5 * time.Second
+			maxDelay := 30 * time.Second
+			maxAttempts := 5
+			multiplier := 2.0
+			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
 		},
 	}
 
