@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"domain/url/repository"
 	"domain/useragent"
+	vacancyRepo "domain/vacancy/repository"
 	"fmt"
 	httpClient "infrastructure/http/client"
 	infraMongo "infrastructure/mongo"
@@ -12,6 +13,7 @@ import (
 	"infrastructure/proxy/client/agent"
 	"infrastructure/proxy/port"
 	"infrastructure/url"
+	"infrastructure/vacancy"
 	"log"
 	"time"
 
@@ -20,12 +22,13 @@ import (
 
 // Container provides a lazily initialized set of dependencies for the infrastructure layer.
 type Container struct {
-	ProxyConnection dependency.LazyDependency[*port.Connection]
-	UserAgent       dependency.LazyDependency[useragent.Generator]
-	Socks5Client    dependency.LazyDependency[*client.Socks5Client]
-	HttpFactory     dependency.LazyDependency[*httpClient.Factory]
-	MongoClient     dependency.LazyDependency[*mongo.Client]
-	UrlRepository   dependency.LazyDependency[repository.UrlRepository]
+	ProxyConnection   dependency.LazyDependency[*port.Connection]
+	UserAgent         dependency.LazyDependency[useragent.Generator]
+	Socks5Client      dependency.LazyDependency[*client.Socks5Client]
+	HttpFactory       dependency.LazyDependency[*httpClient.Factory]
+	MongoClient       dependency.LazyDependency[*mongo.Client]
+	UrlRepository     dependency.LazyDependency[repository.UrlRepository]
+	VacancyRepository dependency.LazyDependency[vacancyRepo.VacancyRepository]
 }
 
 // NewContainer initializes and returns a new Container with lazy dependencies for the infrastructure layer.
@@ -69,6 +72,13 @@ func NewContainer(cfg *config.Config) *Container {
 			mongoClient := c.MongoClient.Get()
 			collection := mongoClient.Database(cfg.Mongo.DB).Collection(cfg.Mongo.UrlsCollection)
 			return url.NewRepository(mongoClient, collection)
+		},
+	}
+	c.VacancyRepository = dependency.LazyDependency[vacancyRepo.VacancyRepository]{
+		InitFunc: func() vacancyRepo.VacancyRepository {
+			mongoClient := c.MongoClient.Get()
+			collection := mongoClient.Database(cfg.Mongo.DB).Collection(cfg.Mongo.VacancyCollection)
+			return vacancy.NewRepository(mongoClient, collection)
 		},
 	}
 
