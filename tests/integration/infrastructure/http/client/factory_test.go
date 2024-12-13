@@ -12,7 +12,7 @@ import (
 
 // TestFactory_CreateDefaultClient tests the creation of a default HTTP client.
 func TestFactory_CreateDefaultClient(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	factory := container.HttpFactory.Get()
 
 	// Create a default client
@@ -34,7 +34,7 @@ func TestFactory_CreateDefaultClient(t *testing.T) {
 
 // TestFactory_CreateSocks5Client tests the creation of a SOCKS5 HTTP client.
 func TestFactory_CreateSocks5Client(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	factory := container.HttpFactory.Get()
 	config := container.Config.Get()
 

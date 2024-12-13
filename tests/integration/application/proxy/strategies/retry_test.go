@@ -11,7 +11,7 @@ import (
 // TestRetryStrategy_Success verifies that the exponential backoff strategy calculates the correct delays
 // for various retry attempts. It ensures delays grow exponentially and are capped at the maximum delay.
 func TestRetryStrategy_Success(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	strategy := container.RetryStrategy.Get()
 
 	// Test the wait duration calculation for various attempts
@@ -32,7 +32,7 @@ func TestRetryStrategy_Success(t *testing.T) {
 // TestRetryStrategy_MaxAttemptsExceeded verifies that the exponential backoff strategy
 // returns an error and zero delay when the number of attempts exceeds the configured maximum.
 func TestRetryStrategy_MaxAttemptsExceeded(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	strategy := container.RetryStrategy.Get()
 
 	// Test exceeding max attempts
@@ -45,7 +45,7 @@ func TestRetryStrategy_MaxAttemptsExceeded(t *testing.T) {
 // TestRetryStrategy_InvalidAttempt verifies that the exponential backoff strategy
 // returns an error and zero delay for invalid (negative) attempt numbers.
 func TestRetryStrategy_InvalidAttempt(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	strategy := container.RetryStrategy.Get()
 
 	// Test invalid (negative) attempt
