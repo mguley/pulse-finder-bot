@@ -9,7 +9,7 @@ import (
 
 // TestManager_ChangeCircuit_Success tests the successful circuit change process.
 func TestManager_ChangeCircuit_Success(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	manager := container.CircuitManager.Get()
 
 	// Request a new circuit and validate the result.
@@ -20,7 +20,7 @@ func TestManager_ChangeCircuit_Success(t *testing.T) {
 
 // TestManager_ChangeCircuit_VerificationFailure tests the behavior when circuit verification fails.
 func TestManager_ChangeCircuit_VerificationFailure(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	// Simulate a verification failure by setting an invalid ping URL.
 	container.Config.Get().Proxy.PingUrl = "http://invalid-url"
 

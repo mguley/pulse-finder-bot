@@ -1,8 +1,6 @@
 package strategies
 
-import "testing"
-
 // SetupTestContainer initializes the TestContainer.
-func SetupTestContainer(t *testing.T) *TestContainer {
+func SetupTestContainer() *TestContainer {
 	return NewTestContainer()
 }

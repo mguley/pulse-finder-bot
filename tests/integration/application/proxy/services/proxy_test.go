@@ -11,7 +11,7 @@ import (
 
 // TestService_HttpClient_Success tests the creation and reuse of an HTTP client.
 func TestService_HttpClient_Success(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	service := container.ProxyService.Get()
 
 	// Retrieve the HTTP client
@@ -27,7 +27,7 @@ func TestService_HttpClient_Success(t *testing.T) {
 
 // TestService_HttpClient_Failure tests the behavior when an invalid proxy is used.
 func TestService_HttpClient_Failure(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 
 	// Override the proxy host and port with invalid values
 	container.Config.Get().Proxy.Host = "invalid_host"
