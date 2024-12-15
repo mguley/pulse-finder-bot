@@ -10,6 +10,8 @@ import (
 
 var checkerPool = newCheckerPool()
 
+// newCheckerPool creates and initializes a singleton sync.Pool for managing reusable Checker objects.
+// This uses a once.Do mechanism to ensure the pool is only created once during runtime.
 func newCheckerPool() func() *sync.Pool {
 	var once sync.Once
 	var pool *sync.Pool
@@ -26,19 +28,20 @@ func newCheckerPool() func() *sync.Pool {
 	}
 }
 
-// Checker is a reusable struct for making HTTP requests.
+// Checker is a reusable struct that performs HTTP requests.
 type Checker struct {
-	client *http.Client
+	client *http.Client // The HTTP client used for performing requests.
 }
 
-// SetClient sets HTTP client for the Checker.
+// SetClient sets a custom HTTP client for the Checker instance.
 func (c *Checker) SetClient(client *http.Client) *Checker {
 	c.client = client
 	return c
 }
 
-// GetInfo fetches content from the given URL using the configured HTTP client.
+// GetInfo fetches content from the provided URL using the configured HTTP client.
 func (c *Checker) GetInfo(ctx context.Context, url string) (string, error) {
+	// If no HTTP client is set, use the default HTTP client.
 	if c.client == nil {
 		c.client = http.DefaultClient
 	}
@@ -72,18 +75,18 @@ func (c *Checker) GetInfo(ctx context.Context, url string) (string, error) {
 	return string(body), nil
 }
 
-// Reset clears a Checker state for reuse.
+// Reset clears the state of the Checker object, preparing it for reuse.
 func (c *Checker) Reset() *Checker {
 	c.client = nil
 	return c
 }
 
-// Release puts a Checker instance back into the pool.
+// Release returns the Checker instance to the pool after resetting it.
 func (c *Checker) Release() {
 	checkerPool().Put(c.Reset())
 }
 
-// GetChecker retrieves a Checker instance from the pool.
+// GetChecker retrieves a Checker instance from the pool, ensuring it is reset before use.
 func GetChecker() *Checker {
 	return checkerPool().Get().(*Checker).Reset()
 }
