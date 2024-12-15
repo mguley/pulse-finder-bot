@@ -22,6 +22,7 @@ type TestContainer struct {
 	HttpFactory     dependency.LazyDependency[*httpClient.Factory]
 	ProxyService    dependency.LazyDependency[*services.Service]
 	BetaHtmlFetcher dependency.LazyDependency[html.Fetcher]
+	BetaHtmlParser  dependency.LazyDependency[html.Parser]
 }
 
 // NewTestContainer initializes a new test container.
@@ -63,6 +64,11 @@ func NewTestContainer() *TestContainer {
 				log.Fatalf("failed to init fetcher: %v", err)
 			}
 			return fetcher
+		},
+	}
+	c.BetaHtmlParser = dependency.LazyDependency[html.Parser]{
+		InitFunc: func() html.Parser {
+			return htmlBeta.NewParser()
 		},
 	}
 

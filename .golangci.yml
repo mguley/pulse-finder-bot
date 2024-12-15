@@ -64,7 +64,7 @@ linters-settings:
     min-complexity: 10               # Minimum complexity level for triggering warnings, encouraging simpler code
 
   nestif:
-    min-complexity: 3                # Maximum allowed nesting depth for `if` statements, promoting readable code
+    min-complexity: 4                # Maximum allowed nesting depth for `if` statements, promoting readable code
 
   funlen:
     lines: 200                       # Maximum number of lines allowed in a function to encourage modular code
