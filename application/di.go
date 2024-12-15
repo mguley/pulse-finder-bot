@@ -23,6 +23,7 @@ type Container struct {
 	IdentityService         dependency.LazyDependency[*services.Identity]
 	CircuitManager          dependency.LazyDependency[*circuit.Manager]
 	BetaHtmlFetcher         dependency.LazyDependency[html.Fetcher]
+	BetaHtmlParser          dependency.LazyDependency[html.Parser]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -115,6 +116,11 @@ func NewContainer() *Container {
 				log.Fatalf("failed to init fetcher: %v", err)
 			}
 			return fetcher
+		},
+	}
+	c.BetaHtmlParser = dependency.LazyDependency[html.Parser]{
+		InitFunc: func() html.Parser {
+			return htmlBeta.NewParser()
 		},
 	}
 
