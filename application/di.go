@@ -7,7 +7,10 @@ import (
 	"application/proxy/commands"
 	"application/proxy/services"
 	"application/proxy/strategies"
+	"domain/html"
 	"infrastructure"
+	htmlBeta "infrastructure/html/source/beta"
+	"log"
 	"time"
 )
 
@@ -19,6 +22,7 @@ type Container struct {
 	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService         dependency.LazyDependency[*services.Identity]
 	CircuitManager          dependency.LazyDependency[*circuit.Manager]
+	BetaHtmlFetcher         dependency.LazyDependency[html.Fetcher]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -99,6 +103,18 @@ func NewContainer() *Container {
 	c.CircuitManager = dependency.LazyDependency[*circuit.Manager]{
 		InitFunc: func() *circuit.Manager {
 			return circuit.NewManager(c.IdentityService.Get(), c.ProxyService.Get(), c.Config.Get().Proxy.PingUrl)
+		},
+	}
+
+	// Parser services
+	c.BetaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
+		InitFunc: func() html.Fetcher {
+			maxBodySize := int64(10 * 1024 * 1024) // 10MB
+			fetcher, err := htmlBeta.NewFetcher(c.ProxyService.Get(), maxBodySize)
+			if err != nil {
+				log.Fatalf("failed to init fetcher: %v", err)
+			}
+			return fetcher
 		},
 	}
 
