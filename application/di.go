@@ -7,10 +7,12 @@ import (
 	"application/proxy/commands"
 	"application/proxy/services"
 	"application/proxy/strategies"
+	"application/url/sitemap"
 	"domain/html"
 	"infrastructure"
 	htmlBeta "infrastructure/html/source/beta"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -18,6 +20,7 @@ import (
 // It acts as a central registry for services, ensuring that dependencies are managed in a lazy loaded manner.
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
+	SitemapService          dependency.LazyDependency[*sitemap.Service]
 	ProxyService            dependency.LazyDependency[*services.Service]
 	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService         dependency.LazyDependency[*services.Identity]
@@ -38,13 +41,6 @@ func NewContainer() *Container {
 	// Create container with base dependencies
 	c.Config = dependency.LazyDependency[*config.Config]{
 		InitFunc: config.LoadConfig,
-	}
-
-	// Domain/layer containers
-	c.InfrastructureContainer = dependency.LazyDependency[*infrastructure.Container]{
-		InitFunc: func() *infrastructure.Container {
-			return infrastructure.NewContainer(c.Config.Get())
-		},
 	}
 
 	// Proxy commands
@@ -121,6 +117,27 @@ func NewContainer() *Container {
 	c.BetaHtmlParser = dependency.LazyDependency[html.Parser]{
 		InitFunc: func() html.Parser {
 			return htmlBeta.NewParser()
+		},
+	}
+
+	// Domain/layer containers
+	c.InfrastructureContainer = dependency.LazyDependency[*infrastructure.Container]{
+		InitFunc: func() *infrastructure.Container {
+			return infrastructure.NewContainer(c.Config.Get(), c.ProxyService.Get())
+		},
+	}
+
+	// Sitemap service
+	c.SitemapService = dependency.LazyDependency[*sitemap.Service]{
+		InitFunc: func() *sitemap.Service {
+			fetcher := c.InfrastructureContainer.Get().SitemapFetcher.Get()
+			parser := c.InfrastructureContainer.Get().SitemapParser.Get()
+			repo := c.InfrastructureContainer.Get().SitemapRepository.Get()
+			notifier := c.InfrastructureContainer.Get().SitemapNotifier.Get()
+			proxyClient := func() (*http.Client, error) {
+				return c.ProxyService.Get().HttpClient()
+			}
+			return sitemap.NewService(fetcher, parser, repo, notifier, proxyClient)
 		},
 	}
 
