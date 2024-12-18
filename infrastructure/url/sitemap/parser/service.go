@@ -51,5 +51,5 @@ func (s *Service) Parse(body io.Reader) ([]string, error) {
 
 // isValid filters URLs to include only job offer URLs.
 func (s *Service) isValid(url string) bool {
-	return len(url) > 0 && strings.Contains(url, "/job-offer/")
+	return url != "" && strings.Contains(url, "/job-offer/")
 }
