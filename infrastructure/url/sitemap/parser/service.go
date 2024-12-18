@@ -1,11 +1,11 @@
 package parser
 
 import (
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 // Service is responsible for parsing HTML content and extracting URLs.
@@ -16,47 +16,40 @@ func NewService() *Service {
 	return &Service{}
 }
 
+// URL represents the structure of each <url> element in the XML.
+type URL struct {
+	Location string `xml:"loc"`
+}
+
+// Sitemap represents the structure of the sitemap XML.
+type Sitemap struct {
+	URLs []URL `xml:"url"`
+}
+
 // Parse extracts URLs from the provided HTML content.
 func (s *Service) Parse(body io.Reader) ([]string, error) {
-	// Read the entire body into a string.
-	bodyBytes, err := io.ReadAll(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read body: %w", err)
-	}
-	htmlContent := string(bodyBytes)
-
-	// Load the HTML document using goquery.
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
-	if err != nil {
-		return nil, fmt.Errorf("failed to load HTML document: %w", err)
+	var sitemap Sitemap
+	if err := xml.NewDecoder(body).Decode(&sitemap); err != nil {
+		return nil, fmt.Errorf("parse sitemap: %w", err)
 	}
 
-	var urls []string
-	var host string
+	// If no URLs are found, return an error
+	if len(sitemap.URLs) == 0 {
+		return nil, errors.New("no URLs found in sitemap")
+	}
 
-	// Extract the host from the footer (or another location).
-	doc.Find("footer a").EachWithBreak(func(i int, s *goquery.Selection) bool {
-		href, exists := s.Attr("href")
-		if exists && strings.HasPrefix(href, "https://") {
-			host = href
-			return false // Break after finding the first valid host.
+	// Extract URLs from the sitemap
+	urls := make([]string, 0, len(sitemap.URLs))
+	for _, url := range sitemap.URLs {
+		if s.isValid(url.Location) {
+			urls = append(urls, url.Location)
 		}
-		return true
-	})
-
-	// If no host is found, return an error.
-	if host == "" {
-		return nil, fmt.Errorf("failed to find host in HTML document")
 	}
-
-	// Extract and combine job offer URLs with the host.
-	doc.Find(".MuiBox-root a").Each(func(i int, s *goquery.Selection) {
-		href, exists := s.Attr("href")
-		if exists && strings.Contains(href, "/job-offer/") { // Filter job offer URLs.
-			fullUrl := host + href
-			urls = append(urls, fullUrl)
-		}
-	})
 
 	return urls, nil
+}
+
+// isValid filters URLs to include only job offer URLs.
+func (s *Service) isValid(url string) bool {
+	return len(url) > 0 && strings.Contains(url, "/job-offer/")
 }

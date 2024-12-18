@@ -7,6 +7,9 @@ import (
 	"application/proxy/commands"
 	"application/proxy/services"
 	"application/proxy/strategies"
+	"application/source"
+	"application/source/beta"
+	"application/url/processor"
 	"application/url/sitemap"
 	"domain/html"
 	"infrastructure"
@@ -35,6 +38,9 @@ type Container struct {
 	CircuitManager          dependency.LazyDependency[*circuit.Manager]
 	BetaHtmlFetcher         dependency.LazyDependency[html.Fetcher]
 	BetaHtmlParser          dependency.LazyDependency[html.Parser]
+	BetaHandler             dependency.LazyDependency[*beta.Handler]
+	SourceFactory           dependency.LazyDependency[*source.Factory]
+	ProcessorService        dependency.LazyDependency[*processor.Service]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
@@ -127,6 +133,13 @@ func NewContainer() *Container {
 			return htmlBeta.NewParser()
 		},
 	}
+	c.BetaHandler = dependency.LazyDependency[*beta.Handler]{
+		InitFunc: func() *beta.Handler {
+			url := c.Config.Get().SourceHandler.Beta.SitemapURL
+			sitemapService := c.SitemapService.Get()
+			return beta.NewHandler(url, sitemapService)
+		},
+	}
 
 	// Domain/layer containers
 	c.InfrastructureContainer = dependency.LazyDependency[*infrastructure.Container]{
@@ -167,6 +180,16 @@ func NewContainer() *Container {
 				return c.ProxyService.Get().HttpClient()
 			}
 			return sitemap.NewService(sitemapFetcher, sitemapParser, sitemapRepo, sitemapNotifier, proxyClient)
+		},
+	}
+	c.SourceFactory = dependency.LazyDependency[*source.Factory]{
+		InitFunc: source.NewFactory,
+	}
+	c.ProcessorService = dependency.LazyDependency[*processor.Service]{
+		InitFunc: func() *processor.Service {
+			sourceFactory := c.SourceFactory.Get()
+			batchSize := c.Config.Get().SourceHandler.BatchSize
+			return processor.NewService(sourceFactory, batchSize)
 		},
 	}
 
