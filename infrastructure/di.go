@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"application/config"
 	"application/dependency"
-	"application/proxy/services"
 	"domain/url/repository"
 	"domain/useragent"
 	vacancyRepo "domain/vacancy/repository"
@@ -14,13 +13,8 @@ import (
 	"infrastructure/proxy/client/agent"
 	"infrastructure/proxy/port"
 	"infrastructure/url"
-	"infrastructure/url/sitemap/fetcher"
-	"infrastructure/url/sitemap/notifier"
-	"infrastructure/url/sitemap/parser"
-	sitemapRepository "infrastructure/url/sitemap/repository"
 	"infrastructure/vacancy"
 	"log"
-	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,14 +29,10 @@ type Container struct {
 	MongoClient       dependency.LazyDependency[*mongo.Client]
 	UrlRepository     dependency.LazyDependency[repository.UrlRepository]
 	VacancyRepository dependency.LazyDependency[vacancyRepo.VacancyRepository]
-	SitemapFetcher    dependency.LazyDependency[*fetcher.Service]
-	SitemapNotifier   dependency.LazyDependency[*notifier.Service]
-	SitemapParser     dependency.LazyDependency[*parser.Service]
-	SitemapRepository dependency.LazyDependency[*sitemapRepository.Service]
 }
 
 // NewContainer initializes and returns a new Container with lazy dependencies for the infrastructure layer.
-func NewContainer(cfg *config.Config, proxy *services.Service) *Container {
+func NewContainer(cfg *config.Config) *Container {
 	c := &Container{}
 
 	c.ProxyConnection = dependency.LazyDependency[*port.Connection]{
@@ -89,29 +79,6 @@ func NewContainer(cfg *config.Config, proxy *services.Service) *Container {
 			mongoClient := c.MongoClient.Get()
 			collection := mongoClient.Database(cfg.Mongo.DB).Collection(cfg.Mongo.VacancyCollection)
 			return vacancy.NewRepository(mongoClient, collection)
-		},
-	}
-
-	// Sitemap services
-	c.SitemapFetcher = dependency.LazyDependency[*fetcher.Service]{
-		InitFunc: func() *fetcher.Service {
-			proxyClient := func() (*http.Client, error) {
-				return proxy.HttpClient()
-			}
-			return fetcher.NewService(proxyClient)
-		},
-	}
-	c.SitemapNotifier = dependency.LazyDependency[*notifier.Service]{
-		InitFunc: func() *notifier.Service {
-			return notifier.NewService(cfg.Proxy.PingUrl)
-		},
-	}
-	c.SitemapParser = dependency.LazyDependency[*parser.Service]{
-		InitFunc: parser.NewService,
-	}
-	c.SitemapRepository = dependency.LazyDependency[*sitemapRepository.Service]{
-		InitFunc: func() *sitemapRepository.Service {
-			return sitemapRepository.NewService(c.UrlRepository.Get())
 		},
 	}
 

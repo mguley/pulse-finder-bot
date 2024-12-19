@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"infrastructure/proxy"
 	"net/http"
-	"time"
 )
 
 // Service handles notification tasks, such as logging proxy IP information.
@@ -19,12 +18,9 @@ func NewService(url string) *Service {
 }
 
 // Notify retrieves and logs the proxy's IP address using the provided HTTP client.
-func (s *Service) Notify(client *http.Client) error {
+func (s *Service) Notify(ctx context.Context, client *http.Client) error {
 	checker := proxy.GetChecker().SetClient(client)
 	defer checker.Release()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	ip, err := checker.GetInfo(ctx, s.url)
 	if err != nil {
