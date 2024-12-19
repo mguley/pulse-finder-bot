@@ -137,7 +137,13 @@ func NewContainer() *Container {
 		InitFunc: func() *beta.Handler {
 			url := c.Config.Get().SourceHandler.Beta.SitemapURL
 			sitemapService := c.SitemapService.Get()
-			return beta.NewHandler(url, sitemapService)
+			circuitManager := c.CircuitManager.Get()
+			urlRepository := c.InfrastructureContainer.Get().UrlRepository.Get()
+			vacancyRepository := c.InfrastructureContainer.Get().VacancyRepository.Get()
+			htmlFetcher := c.BetaHtmlFetcher.Get()
+			htmlParser := c.BetaHtmlParser.Get()
+			return beta.NewHandler(url, sitemapService, circuitManager, urlRepository,
+				vacancyRepository, htmlFetcher, htmlParser)
 		},
 	}
 

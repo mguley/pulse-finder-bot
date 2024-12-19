@@ -17,10 +17,10 @@ func TestParser_Parse_ValidXML(t *testing.T) {
 	xmlContent := `
 		<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 			<url>
-				<loc>https://example.com/job-offer/12345</loc>
+				<loc>https://example.com/job-offer/12-go-12345</loc>
 			</url>
 			<url>
-				<loc>https://example.com/job-offer/67890</loc>
+				<loc>https://example.com/job-offer/12-go-67890</loc>
 			</url>
 		</urlset>
 	`
@@ -33,8 +33,8 @@ func TestParser_Parse_ValidXML(t *testing.T) {
 
 	// Assert the extracted URLs
 	expectedUrls := []string{
-		"https://example.com/job-offer/12345",
-		"https://example.com/job-offer/67890",
+		"https://example.com/job-offer/12-go-12345",
+		"https://example.com/job-offer/12-go-67890",
 	}
 	assert.ElementsMatch(t, expectedUrls, urls, "Parsed URLs do not match expected values")
 }

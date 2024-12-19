@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -49,7 +50,32 @@ func (s *Service) Parse(body io.Reader) ([]string, error) {
 	return urls, nil
 }
 
-// isValid filters URLs to include only job offer URLs.
+// isValid filters URLs to include only job offer URLs relevant to Golang.
 func (s *Service) isValid(url string) bool {
-	return url != "" && strings.Contains(url, "/job-offer/")
+	// Check if the URL is a job offer and matches Golang-specific patterns
+	return url != "" &&
+		strings.Contains(url, "/job-offer/") &&
+		(strings.Contains(url, "golang") || strings.Contains(url, "-go-"))
+}
+
+// SaveToFile saves the extracted URLs to a specified file for analysis.
+func (s *Service) SaveToFile(urls []string, filePath string) error {
+	// Open the file for writing, creating it if it doesn't exist
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			fmt.Printf("close file: %v", err)
+		}
+	}()
+
+	// Write URLs to the file
+	for _, url := range urls {
+		if _, err = file.WriteString(url + "\n"); err != nil {
+			return fmt.Errorf("write to file: %w", err)
+		}
+	}
+	return nil
 }
