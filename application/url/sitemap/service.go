@@ -39,6 +39,15 @@ func NewService(
 
 // ProcessUrls orchestrates the complete flow of fetching, parsing, notifying, and saving URLs.
 func (s *Service) ProcessUrls(ctx context.Context, url string) error {
+	// Notify (log the proxy's IP address).
+	client, err := s.client()
+	if err != nil {
+		return fmt.Errorf("get client: %w", err)
+	}
+	if err = s.notifier.Notify(ctx, client); err != nil {
+		return fmt.Errorf("notify: %w", err)
+	}
+
 	// Fetch content from the URL.
 	body, err := s.fetcher.Fetch(ctx, url)
 	if err != nil {
@@ -49,15 +58,6 @@ func (s *Service) ProcessUrls(ctx context.Context, url string) error {
 			fmt.Printf("close body err:%v", err)
 		}
 	}()
-
-	// Notify (log the proxy's IP address).
-	client, err := s.client()
-	if err != nil {
-		return fmt.Errorf("get client: %w", err)
-	}
-	if err = s.notifier.Notify(client); err != nil {
-		return fmt.Errorf("notify: %w", err)
-	}
 
 	// Parse the fetched content to extract URLs.
 	urls, err := s.parser.Parse(body)

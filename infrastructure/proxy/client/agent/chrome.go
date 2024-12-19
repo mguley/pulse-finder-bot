@@ -36,7 +36,7 @@ func (g *ChromeUserAgentGenerator) Generate() string {
 	v := g.versions[g.rand(len(g.versions))]
 	os := g.operatingSystems[g.rand(len(g.operatingSystems))]
 
-	return fmt.Sprintf("Mοzilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36", os, v)
+	return fmt.Sprintf("Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36", os, v)
 }
 
 // rand generates random integer.

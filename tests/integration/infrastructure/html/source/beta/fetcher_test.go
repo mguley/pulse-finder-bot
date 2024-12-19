@@ -16,7 +16,7 @@ func TestFetcher_FetchValidURL(t *testing.T) {
 	url := container.Config.Get().Proxy.PingUrl
 
 	// Fetch the content
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	content, err := fetcher.Fetch(ctx, url)
 
