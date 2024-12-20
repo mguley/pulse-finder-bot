@@ -89,3 +89,32 @@ test/integration:
 test/integration/no-cache:
 	@echo 'Running integration tests (no cache, sequentially)...'
 	go test -v -count=1 -p=1 ./tests/integration/...
+
+# =============================================================================== #
+# BUILD
+# =============================================================================== #
+
+## build/api: Build application without optimizations
+.PHONY: build/api
+build/api:
+	@echo 'Building application without optimizations...'
+	@mkdir -p ./bin
+	GOARCH=amd64 GOOS=linux go build -o=./bin/api ./cmd/main
+	@echo 'Build for Linux (amd64) complete.'
+
+## build/api/optimized: Build application with optimizations
+.PHONY: build/api/optimized
+build/api/optimized:
+	@echo 'Building application with optimizations...'
+	@mkdir -p ./bin
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/linux_amd64/api ./cmd/main
+	@echo 'Build for Linux (amd64) complete (optimized).'
+
+# =============================================================================== #
+# PRODUCTION DEPLOYMENT TASKS
+# =============================================================================== #
+
+## production/connect: Connect to the production server
+.PHONY: production/connect
+production/connect:
+	ssh bot@${PRODUCTION_HOST_IP}
