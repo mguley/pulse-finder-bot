@@ -17,6 +17,7 @@ services:
     volumes:
       - ./terraform:/workspace
       - ./remote/setup:/workspace/remote
+      - ~/.ssh/vult:/root/.ssh:ro
     working_dir: /workspace
     entrypoint: ["/bin/sh", "-c", "apk update && apk add --no-cache rsync && tail -f /dev/null"]
     networks:
