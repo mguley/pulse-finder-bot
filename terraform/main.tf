@@ -13,5 +13,5 @@ resource "vultr_instance" "bot-api" {
 # Resource to add an SSH key to Vultr for authentication
 resource "vultr_ssh_key" "default" {
   name = "default_ssh_key"                  # Name for the SSH key in Vultr
-  ssh_key = file("~/.ssh/id_rsa.pub")       # Path to the public SSH key file
+  ssh_key = file("~/.ssh/id_ed25519.pub")   # Path to the public SSH key file
 }
