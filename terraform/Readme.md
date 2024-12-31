@@ -17,14 +17,14 @@ terraform apply
 ---
 #### Step 2. Run the Setup Script
 
-Copy the `01.sh` setup script to the remote instance. This script will install necessary software and configure the system.
+Copy the `setup-environment.sh` setup script to the remote instance. This script will install necessary software and configure the system.
 ```bash
 rsync -rPv --delete remote/ root@<INSTANCE-IP>:/root/remote/
 ```
 
 Log into the remote instance as root and run the script
 ```bash
-ssh -t root@<INSTANCE-IP> "bash /root/remote/setup/01.sh"
+ssh -t root@<INSTANCE-IP> "bash /root/remote/setup/setup-environment.sh"
 ```
 
 This will:

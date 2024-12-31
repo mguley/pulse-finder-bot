@@ -60,6 +60,7 @@ func NewContainer(cfg *config.Config) *Container {
 	c.MongoClient = dependency.LazyDependency[*mongo.Client]{
 		InitFunc: func() *mongo.Client {
 			uri := fmt.Sprintf("mongodb://%s:%s@%s:%s", cfg.Mongo.User, cfg.Mongo.Pass, cfg.Mongo.Host, cfg.Mongo.Port)
+			uri = uri + "/" + cfg.Mongo.DB + "?authSource=admin"
 			mongoClient, err := infraMongo.NewMongoClient(uri)
 			if err != nil {
 				log.Fatalf("mongo client error: %v", err)

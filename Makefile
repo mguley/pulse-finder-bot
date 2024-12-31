@@ -107,7 +107,7 @@ build/api:
 build/api/optimized:
 	@echo 'Building application with optimizations...'
 	@mkdir -p ./bin
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/linux_amd64/api ./cmd/main
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/linux_amd64/api-o ./cmd/main
 	@echo 'Build for Linux (amd64) complete (optimized).'
 
 # =============================================================================== #
@@ -118,3 +118,21 @@ build/api/optimized:
 .PHONY: production/connect
 production/connect:
 	ssh bot@${PRODUCTION_HOST_IP}
+
+## production/deploy-bot-files: Deploy new binary
+.PHONY: production/deploy-bot-files
+production/deploy-bot-files:
+	@echo 'Deploying new binary ...'
+	rsync -P ./bin/linux_amd64/api-o bot@${PRODUCTION_HOST_IP}:/tmp/api-o
+	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
+	  sudo mkdir -p /opt/bot-client && \
+	  sudo mv /tmp/api-o /opt/bot-client && \
+	  sudo chown -R bot:bot /opt/bot-client && \
+	  sudo chmod +x /opt/bot-client/api-o'
+
+## production/deploy/bot: Deploy application to production
+.PHONY: production/deploy/bot
+production/deploy/bot:
+	@$(MAKE) build/api/optimized
+	@$(MAKE) production/deploy-bot-files
+	@echo 'Deployment to production complete.'
