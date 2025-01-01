@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "infrastructure/proto/auth/messages.proto";
+option go_package = "infrastructure/proto/auth/gen;authv1";
+
+// ----------------------------------------------------------------------------
+// Service Definitions
+// ----------------------------------------------------------------------------
+
+// AuthService provides methods to generate JWT tokens.
+service AuthService {
+  // GenerateToken generates a new JWT token using the provided request fields.
+  rpc GenerateToken (GenerateTokenRequest) returns (GenerateTokenResponse);
+}
