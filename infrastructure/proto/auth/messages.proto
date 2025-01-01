@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "infrastructure/proto/auth/gen;authv1";
+
+// ----------------------------------------------------------------------------
+// Message Definitions
+// ----------------------------------------------------------------------------
+
+// GenerateTokenRequest is the request message for generating a JWT token.
+message GenerateTokenRequest {
+  // issuer is the entity that issues the token (commonly "iss" in JWT claims).
+  string issuer = 1;
+
+  // scopes define the set of permissions or roles associated with the token.
+  // This can be a list of strings that represent different scopes.
+  repeated string scopes = 2;
+}
+
+// GenerateTokenResponse is the response containing the generated JWT token.
+message GenerateTokenResponse {
+  // token is the generated JWT token.
+  string token = 1;
+}
