@@ -40,3 +40,15 @@ ssh bot@<INSTANCE-IP>
 ```
 On your first login, you'll be prompted to set a password for the `bot` user.
 
+---
+#### Step 4. Deploy the application / gRPC client
+```bash
+make production/deploy/bot
+make production/deploy-auth-grpc-client
+```
+
+---
+#### Step 5. Configure access for the gRPC client (remote host to whom we connect)
+```bash
+sudo ufw allow from 1.2.3.4 to any port 63055 comment "Auth gRPC client"
+```

@@ -57,6 +57,11 @@ PROXY_CONTROL_PASSWORD=password
 PROXY_CONTROL_PORT=9051
 PROXY_PING_URL=https://api.ipify.org?format=json
 
+# gRPC client/application
+AUTH_SERVER_ADDRESS=api.pulse-finder.mguley.com:63055
+AUTH_ISSUER=grpc.pulse-finder.bot
+ENV=prod
+
 # Export locale to ensure consistent system behavior
 export LC_ALL=en_US.UTF-8
 
@@ -163,6 +168,10 @@ set_environment_variables() {
         echo "PROXY_CONTROL_PASSWORD=${PROXY_CONTROL_PASSWORD}"
         echo "PROXY_CONTROL_PORT=${PROXY_CONTROL_PORT}"
         echo "PROXY_PING_URL=${PROXY_PING_URL}"
+        # gRPC
+        echo "AUTH_SERVER_ADDRESS=${AUTH_SERVER_ADDRESS}"
+        echo "AUTH_ISSUER=${AUTH_ISSUER}"
+        echo "ENV=${ENV}"
       } >> /etc/environment
 }
 

@@ -10,6 +10,14 @@ type Config struct {
 	Proxy         ProxyConfig         // Proxy configuration.
 	Mongo         MongoDBConfig       // MongoDB configuration.
 	SourceHandler SourceHandlerConfig // Source handler configuration.
+	AuthServer    AuthServerConfig    // AuthServer holds configuration details for the Auth service.
+	Env           string              // Environment type (e.g., dev, prod).
+}
+
+// AuthServerConfig contains connection details for the Auth service.
+type AuthServerConfig struct {
+	Address string // Address is the address the Auth service listens on.
+	Issuer  string // Issuer is the identifier of the entity issuing tokens (e.g., "grpc.pulse-finder.bot").
 }
 
 // ProxyConfig holds configuration settings for Proxy.
@@ -76,6 +84,11 @@ func LoadConfig() *Config {
 			},
 			BatchSize: getEnvAsInt("SOURCE_BATCH_SIZE", 1),
 		},
+		AuthServer: AuthServerConfig{
+			Address: getEnv("AUTH_SERVER_ADDRESS", ""),
+			Issuer:  getEnv("AUTH_ISSUER", ""),
+		},
+		Env: getEnv("ENV", "dev"),
 	}
 
 	return config
