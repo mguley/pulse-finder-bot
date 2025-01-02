@@ -7,11 +7,12 @@ import (
 	"domain/useragent"
 	vacancyRepo "domain/vacancy/repository"
 	"fmt"
+	authClient "infrastructure/grpc/auth/client"
 	httpClient "infrastructure/http/client"
 	infraMongo "infrastructure/mongo"
-	"infrastructure/proxy/client"
-	"infrastructure/proxy/client/agent"
-	"infrastructure/proxy/port"
+	proxyClient "infrastructure/proxy/client"
+	proxyAgent "infrastructure/proxy/client/agent"
+	proxyPort "infrastructure/proxy/port"
 	"infrastructure/url"
 	"infrastructure/vacancy"
 	"log"
@@ -22,34 +23,35 @@ import (
 
 // Container provides a lazily initialized set of dependencies for the infrastructure layer.
 type Container struct {
-	ProxyConnection   dependency.LazyDependency[*port.Connection]
+	ProxyConnection   dependency.LazyDependency[*proxyPort.Connection]
 	UserAgent         dependency.LazyDependency[useragent.Generator]
-	Socks5Client      dependency.LazyDependency[*client.Socks5Client]
+	Socks5Client      dependency.LazyDependency[*proxyClient.Socks5Client]
 	HttpFactory       dependency.LazyDependency[*httpClient.Factory]
 	MongoClient       dependency.LazyDependency[*mongo.Client]
 	UrlRepository     dependency.LazyDependency[repository.UrlRepository]
 	VacancyRepository dependency.LazyDependency[vacancyRepo.VacancyRepository]
+	AuthClient        dependency.LazyDependency[*authClient.AuthClient]
 }
 
 // NewContainer initializes and returns a new Container with lazy dependencies for the infrastructure layer.
 func NewContainer(cfg *config.Config) *Container {
 	c := &Container{}
 
-	c.ProxyConnection = dependency.LazyDependency[*port.Connection]{
-		InitFunc: func() *port.Connection {
+	c.ProxyConnection = dependency.LazyDependency[*proxyPort.Connection]{
+		InitFunc: func() *proxyPort.Connection {
 			address := fmt.Sprintf("%s:%s", cfg.Proxy.Host, cfg.Proxy.ControlPort)
 			timeout := 10 * time.Second
-			return port.NewConnection(address, cfg.Proxy.ControlPassword, timeout)
+			return proxyPort.NewConnection(address, cfg.Proxy.ControlPassword, timeout)
 		},
 	}
 	c.UserAgent = dependency.LazyDependency[useragent.Generator]{
 		InitFunc: func() useragent.Generator {
-			return agent.NewChromeUserAgentGenerator()
+			return proxyAgent.NewChromeUserAgentGenerator()
 		},
 	}
-	c.Socks5Client = dependency.LazyDependency[*client.Socks5Client]{
-		InitFunc: func() *client.Socks5Client {
-			return client.NewSocks5Client(c.UserAgent.Get())
+	c.Socks5Client = dependency.LazyDependency[*proxyClient.Socks5Client]{
+		InitFunc: func() *proxyClient.Socks5Client {
+			return proxyClient.NewSocks5Client(c.UserAgent.Get())
 		},
 	}
 	c.HttpFactory = dependency.LazyDependency[*httpClient.Factory]{
@@ -80,6 +82,17 @@ func NewContainer(cfg *config.Config) *Container {
 			mongoClient := c.MongoClient.Get()
 			collection := mongoClient.Database(cfg.Mongo.DB).Collection(cfg.Mongo.VacancyCollection)
 			return vacancy.NewRepository(mongoClient, collection)
+		},
+	}
+	c.AuthClient = dependency.LazyDependency[*authClient.AuthClient]{
+		InitFunc: func() *authClient.AuthClient {
+			env := cfg.Env
+			address := cfg.AuthServer.Address
+			client, err := authClient.NewAuthClient(address, env)
+			if err != nil {
+				log.Fatalf("auth client error: %v", err)
+			}
+			return client
 		},
 	}
 
