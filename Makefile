@@ -115,6 +115,22 @@ build/api/optimized:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/linux_amd64/api-o ./cmd/main
 	@echo 'Build for Linux (amd64) complete (optimized).'
 
+## build/auth-grpc-client: Build the Auth gRPC client service without optimizations
+.PHONY: build/auth-grpc-client
+build/auth-grpc-client:
+	@echo 'Building the Auth gRPC client service without optimizations...'
+	@mkdir -p ./bin/auth
+	GOARCH=amd64 GOOS=linux go build -o=./bin/auth/auth-grpc-client ./cmd/grpc/auth
+	@echo 'Build for Linux (amd64) complete.'
+
+## build/auth-grpc-client/optimized: Build the Auth gRPC client service with optimizations
+.PHONY: build/auth-grpc-client/optimized
+build/auth-grpc-client/optimized:
+	@echo 'Building the Auth gRPC client service with optimizations...'
+	@mkdir -p ./bin/auth
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/auth/auth-grpc-client-o ./cmd/grpc/auth
+	@echo 'Build for Linux (amd64) complete (optimized).'
+
 # =============================================================================== #
 # PRODUCTION DEPLOYMENT TASKS
 # =============================================================================== #
@@ -141,3 +157,14 @@ production/deploy/bot:
 	@$(MAKE) build/api/optimized
 	@$(MAKE) production/deploy-bot-files
 	@echo 'Deployment to production complete.'
+
+## production/deploy-auth-grpc-client: Deploy the Auth gRPC client to production
+.PHONY: production/deploy-auth-grpc-client
+production/deploy-auth-grpc-client:
+	@echo 'Deploying new gRPC client binary ...'
+	rsync -P ./bin/auth/auth-grpc-client-o bot@${PRODUCTION_HOST_IP}:/tmp/auth-grpc-client-o
+	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
+	  sudo mkdir -p /opt/auth-grpc-client && \
+	  sudo mv /tmp/auth-grpc-client-o /opt/auth-grpc-client && \
+	  sudo chown -R bot:bot /opt/auth-grpc-client && \
+	  sudo chmod +x /opt/auth-grpc-client/auth-grpc-client-o'
