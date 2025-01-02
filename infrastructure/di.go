@@ -88,7 +88,7 @@ func NewContainer(cfg *config.Config) *Container {
 		InitFunc: func() *authClient.AuthClient {
 			env := cfg.Env
 			address := cfg.AuthServer.Address
-			client, err := authClient.NewAuthClient(address, env)
+			client, err := authClient.NewAuthClient(env, address)
 			if err != nil {
 				log.Fatalf("auth client error: %v", err)
 			}

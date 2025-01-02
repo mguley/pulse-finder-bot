@@ -17,6 +17,7 @@ type Config struct {
 // AuthServerConfig contains connection details for the Auth service.
 type AuthServerConfig struct {
 	Address string // Address is the address the Auth service listens on.
+	Issuer  string // Issuer is the identifier of the entity issuing tokens (e.g., "grpc.pulse-finder.bot").
 }
 
 // ProxyConfig holds configuration settings for Proxy.
@@ -85,6 +86,7 @@ func LoadConfig() *Config {
 		},
 		AuthServer: AuthServerConfig{
 			Address: getEnv("AUTH_SERVER_ADDRESS", ""),
+			Issuer:  getEnv("AUTH_ISSUER", ""),
 		},
 		Env: getEnv("ENV", "dev"),
 	}
