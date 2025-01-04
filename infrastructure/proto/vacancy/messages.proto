@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package vacancy.v1;
+
+option go_package = "infrastructure/proto/vacancy/gen;vacancyv1";
+
+// ----------------------------------------------------------------------------
+// Message Definitions
+// ----------------------------------------------------------------------------
+
+// CreateVacancyRequest is the request message for creating a new job vacancy.
+message CreateVacancyRequest {
+  // title is the title of the job vacancy.
+  string title = 1;
+
+  // company is the name of the company offering the job vacancy.
+  string company = 2;
+
+  // description provides details about the job vacancy.
+  string description = 3;
+
+  // posted_at is the date when the job vacancy was posted (format: YYYY-MM-DD).
+  string posted_at = 4;
+
+  // location specifies the location of the job vacancy.
+  string location = 5;
+}
+
+// CreateVacancyResponse is the response message for a successfully created job vacancy.
+message CreateVacancyResponse {
+  // id is the unique identifier of the created job vacancy.
+  int64 id = 1;
+
+  // title is the title of the job vacancy.
+  string title = 2;
+
+  // company is the name of the company offering the job vacancy.
+  string company = 3;
+
+  // description provides details about the job vacancy.
+  string description = 4;
+
+  // posted_at is the date when the job vacancy was posted (format: YYYY-MM-DD).
+  string posted_at = 5;
+
+  // location specifies the location of the job vacancy.
+  string location = 6;
+}
