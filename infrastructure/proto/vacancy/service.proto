@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package vacancy.v1;
+
+import "infrastructure/proto/vacancy/messages.proto";
+option go_package = "infrastructure/proto/vacancy/gen;vacancyv1";
+
+// ----------------------------------------------------------------------------
+// Service Definitions
+// ----------------------------------------------------------------------------
+
+// VacancyService provides methods to manage job vacancies.
+service VacancyService {
+  // CreateVacancy creates a new job vacancy with the provided details.
+  rpc CreateVacancy (CreateVacancyRequest) returns (CreateVacancyResponse);
+}
