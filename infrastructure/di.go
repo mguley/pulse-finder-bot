@@ -8,6 +8,7 @@ import (
 	vacancyRepo "domain/vacancy/repository"
 	"fmt"
 	authClient "infrastructure/grpc/auth/client"
+	vacancyClient "infrastructure/grpc/vacancy/client"
 	httpClient "infrastructure/http/client"
 	infraMongo "infrastructure/mongo"
 	proxyClient "infrastructure/proxy/client"
@@ -31,6 +32,7 @@ type Container struct {
 	UrlRepository     dependency.LazyDependency[repository.UrlRepository]
 	VacancyRepository dependency.LazyDependency[vacancyRepo.VacancyRepository]
 	AuthClient        dependency.LazyDependency[*authClient.AuthClient]
+	VacancyClient     dependency.LazyDependency[*vacancyClient.VacancyClient]
 }
 
 // NewContainer initializes and returns a new Container with lazy dependencies for the infrastructure layer.
@@ -91,6 +93,17 @@ func NewContainer(cfg *config.Config) *Container {
 			client, err := authClient.NewAuthClient(env, address)
 			if err != nil {
 				log.Fatalf("auth client error: %v", err)
+			}
+			return client
+		},
+	}
+	c.VacancyClient = dependency.LazyDependency[*vacancyClient.VacancyClient]{
+		InitFunc: func() *vacancyClient.VacancyClient {
+			env := cfg.Env
+			address := cfg.VacancyServer.Address
+			client, err := vacancyClient.NewVacancyClient(env, address)
+			if err != nil {
+				log.Fatalf("vacancy client error: %v", err)
 			}
 			return client
 		},

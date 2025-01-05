@@ -11,7 +11,13 @@ type Config struct {
 	Mongo         MongoDBConfig       // MongoDB configuration.
 	SourceHandler SourceHandlerConfig // Source handler configuration.
 	AuthServer    AuthServerConfig    // AuthServer holds configuration details for the Auth service.
+	VacancyServer VacancyServerConfig // VacancyServer holds configuration details for the Vacancy service.
 	Env           string              // Environment type (e.g., dev, prod).
+}
+
+// VacancyServerConfig contains connection details for the Vacancy service.
+type VacancyServerConfig struct {
+	Address string // Address is the address the Vacancy service listens on.
 }
 
 // AuthServerConfig contains connection details for the Auth service.
@@ -87,6 +93,9 @@ func LoadConfig() *Config {
 		AuthServer: AuthServerConfig{
 			Address: getEnv("AUTH_SERVER_ADDRESS", ""),
 			Issuer:  getEnv("AUTH_ISSUER", ""),
+		},
+		VacancyServer: VacancyServerConfig{
+			Address: getEnv("VACANCY_SERVER_ADDRESS", ""),
 		},
 		Env: getEnv("ENV", "dev"),
 	}
