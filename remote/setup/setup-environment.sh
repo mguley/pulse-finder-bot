@@ -58,6 +58,7 @@ PROXY_CONTROL_PORT=9051
 PROXY_PING_URL=https://api.ipify.org?format=json
 
 # gRPC client/application
+VACANCY_SERVER_ADDRESS=api.pulse-finder.mguley.com:64055
 AUTH_SERVER_ADDRESS=api.pulse-finder.mguley.com:63055
 AUTH_ISSUER=grpc.pulse-finder.bot
 ENV=prod
@@ -169,6 +170,7 @@ set_environment_variables() {
         echo "PROXY_CONTROL_PORT=${PROXY_CONTROL_PORT}"
         echo "PROXY_PING_URL=${PROXY_PING_URL}"
         # gRPC
+        echo "VACANCY_SERVER_ADDRESS=${VACANCY_SERVER_ADDRESS}"
         echo "AUTH_SERVER_ADDRESS=${AUTH_SERVER_ADDRESS}"
         echo "AUTH_ISSUER=${AUTH_ISSUER}"
         echo "ENV=${ENV}"

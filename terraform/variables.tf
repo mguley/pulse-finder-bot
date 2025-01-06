@@ -9,7 +9,7 @@ variable "vultr_api_key" {
 variable "region" {
   description = "Region to deploy the server"
   type        = string
-  default     = "fra"                     # Frankfurt
+  default     = "sto"                     # Stockholm
 }
 
 # Server plan specifying CPU, memory, and storage

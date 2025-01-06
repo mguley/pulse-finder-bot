@@ -21,6 +21,11 @@ run/api:
 run/auth-grpc-client:
 	go run ./cmd/grpc/auth
 
+## run/vacancy-grpc-client: Run the Vacancy gRPC client
+.PHONY: run/vacancy-grpc-client
+run/vacancy-grpc-client:
+	go run ./cmd/grpc/vacancy
+
 # =============================================================================== #
 # QUALITY CONTROL
 # =============================================================================== #
@@ -115,6 +120,22 @@ build/api/optimized:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/linux_amd64/api-o ./cmd/main
 	@echo 'Build for Linux (amd64) complete (optimized).'
 
+## build/vacancy-grpc-client: Build the Vacancy gRPC client service without optimizations
+.PHONY: build/vacancy-grpc-client
+build/vacancy-grpc-client:
+	@echo 'Building the Vacancy gRPC client service without optimizations...'
+	@mkdir -p ./bin/vacancy
+	GOARCH=amd64 GOOS=linux go build -o=./bin/vacancy/vacancy-grpc-client ./cmd/grpc/vacancy
+	@echo 'Build for Linux (amd64) complete.'
+
+## build/vacancy-grpc-client/optimized: Build the Vacancy gRPC client service with optimizations
+.PHONY: build/vacancy-grpc-client/optimized
+build/vacancy-grpc-client/optimized:
+	@echo 'Building the Vacancy gRPC client service with optimizations...'
+	@mkdir -p ./bin/vacancy
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/vacancy/vacancy-grpc-client-o ./cmd/grpc/vacancy
+	@echo 'Build for Linux (amd64) complete (optimized).'
+
 ## build/auth-grpc-client: Build the Auth gRPC client service without optimizations
 .PHONY: build/auth-grpc-client
 build/auth-grpc-client:
@@ -168,3 +189,14 @@ production/deploy-auth-grpc-client:
 	  sudo mv /tmp/auth-grpc-client-o /opt/auth-grpc-client && \
 	  sudo chown -R bot:bot /opt/auth-grpc-client && \
 	  sudo chmod +x /opt/auth-grpc-client/auth-grpc-client-o'
+
+## production/deploy-vacancy-grpc-client: Deploy the Vacancy gRPC client to production
+.PHONY: production/deploy-vacancy-grpc-client
+production/deploy-vacancy-grpc-client:
+	@echo 'Deploying new gRPC client binary ...'
+	rsync -P ./bin/vacancy/vacancy-grpc-client-o bot@${PRODUCTION_HOST_IP}:/tmp/vacancy-grpc-client-o
+	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
+	  sudo mkdir -p /opt/vacancy-grpc-client && \
+	  sudo mv /tmp/vacancy-grpc-client-o /opt/vacancy-grpc-client && \
+	  sudo chown -R bot:bot /opt/vacancy-grpc-client && \
+	  sudo chmod +x /opt/vacancy-grpc-client/vacancy-grpc-client-o'
