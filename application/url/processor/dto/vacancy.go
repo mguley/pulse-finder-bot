@@ -33,6 +33,7 @@ type Vacancy struct {
 	Description string    // A brief description of the job vacancy.
 	PostedAt    time.Time // The timestamp when the job was posted.
 	Location    string    // The location of the job vacancy.
+	SentAt      time.Time // The timestamp when the vacancy was sent.
 }
 
 // Reset clears all fields of the Vacancy object and resets them to their zero values.
@@ -42,6 +43,7 @@ func (v *Vacancy) Reset() *Vacancy {
 	v.Description = ""
 	v.PostedAt = time.Time{}
 	v.Location = ""
+	v.SentAt = time.Time{}
 	return v
 }
 
@@ -63,4 +65,5 @@ func (v *Vacancy) ToEntity(e *entity.Vacancy) {
 	e.Description = v.Description
 	e.PostedAt = v.PostedAt
 	e.Location = v.Location
+	e.SentAt = v.SentAt
 }

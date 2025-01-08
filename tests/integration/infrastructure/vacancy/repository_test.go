@@ -67,6 +67,41 @@ func TestRepository_Fetch(t *testing.T) {
 	assert.Equal(t, "TechCorp", results[0].Company, "Company is not as expected")
 }
 
+// TestRepository_FetchBatch validates the FetchBatch method of the VacancyRepository.
+func TestRepository_FetchBatch(t *testing.T) {
+	container := SetupTestContainer(t)
+	repo := container.VacancyRepository.Get()
+
+	ctx := context.Background()
+
+	// Seed the database with test data
+	now := time.Now()
+	testData := []*entity.Vacancy{
+		{ID: primitive.NewObjectID(), Title: "Job 1", Company: "Company A", Description: "Desc 1", PostedAt: now, Location: "Location 1", SentAt: time.Time{}},
+		{ID: primitive.NewObjectID(), Title: "Job 2", Company: "Company B", Description: "Desc 2", PostedAt: now.Add(-time.Hour), Location: "Location 2", SentAt: time.Time{}},
+		{ID: primitive.NewObjectID(), Title: "Job 3", Company: "Company C", Description: "Desc 3", PostedAt: now.Add(-2 * time.Hour), Location: "Location 3", SentAt: now.Add(-1 * time.Hour)},
+		{ID: primitive.NewObjectID(), Title: "Job 4", Company: "Company D", Description: "Desc 4", PostedAt: now.Add(-3 * time.Hour), Location: "Location 4", SentAt: time.Time{}},
+		{ID: primitive.NewObjectID(), Title: "Job 5", Company: "Company E", Description: "Desc 5", PostedAt: now.Add(-4 * time.Hour), Location: "Location 5", SentAt: now.Add(-2 * time.Hour)},
+	}
+
+	for _, vacancy := range testData {
+		err := repo.Save(ctx, vacancy)
+		require.NoError(t, err, "Failed to save vacancy")
+	}
+
+	// Fetch a batch of unsent vacancies (SentAt is not set)
+	batchSize := 2
+	results, err := repo.FetchBatch(ctx, batchSize)
+	require.NoError(t, err, "Failed to fetch batch of vacancies")
+
+	// Validate the batch size
+	assert.Len(t, results, batchSize, "Unexpected number of results")
+	// Validate the SentAt field is not set for the fetched vacancies
+	for _, item := range results {
+		assert.True(t, item.SentAt.IsZero(), "SentAt field should be unset for unsent vacancies")
+	}
+}
+
 // TestRepository_FindByID validates the FindByID method of the VacancyRepository.
 func TestRepository_FindByID(t *testing.T) {
 	container := SetupTestContainer(t)

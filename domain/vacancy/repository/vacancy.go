@@ -15,6 +15,10 @@ type VacancyRepository interface {
 	// Returns an error if the operation fails.
 	Fetch(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entity.Vacancy, error)
 
+	// FetchBatch retrieves a batch of vacancies where the SentAt field is not set.
+	// Returns a slice of Vacancy entities matching the criteria.
+	FetchBatch(ctx context.Context, limit int) ([]*entity.Vacancy, error)
+
 	// FindByID retrieves a vacancy by its ID.
 	// Returns an error if the operation fails.
 	FindByID(ctx context.Context, id string) (*entity.Vacancy, error)

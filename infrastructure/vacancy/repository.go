@@ -62,6 +62,28 @@ func (r *Repository) Fetch(
 	return list, nil
 }
 
+// FetchBatch retrieves a batch of vacancies where the SentAt field is not set.
+func (r *Repository) FetchBatch(ctx context.Context, limit int) ([]*entity.Vacancy, error) {
+	filter := bson.M{"sent_at": bson.M{"$exists": false}}
+	opt := options.Find().SetLimit(int64(limit))
+
+	cursor, err := r.collection.Find(ctx, filter, opt)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	defer func() {
+		if err = cursor.Close(ctx); err != nil {
+			fmt.Println("cursor.Close", err)
+		}
+	}()
+
+	var list []*entity.Vacancy
+	if err = cursor.All(ctx, &list); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return list, nil
+}
+
 // FindByID retrieves a vacancy entity by its ID from the MongoDB collection.
 func (r *Repository) FindByID(ctx context.Context, id string) (*entity.Vacancy, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
