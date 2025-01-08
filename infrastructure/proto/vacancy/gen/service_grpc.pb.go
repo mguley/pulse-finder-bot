@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	VacancyService_CreateVacancy_FullMethodName = "/vacancy.v1.VacancyService/CreateVacancy"
+	VacancyService_DeleteVacancy_FullMethodName = "/vacancy.v1.VacancyService/DeleteVacancy"
 )
 
 // VacancyServiceClient is the client API for VacancyService service.
@@ -30,6 +31,8 @@ const (
 type VacancyServiceClient interface {
 	// CreateVacancy creates a new job vacancy with the provided details.
 	CreateVacancy(ctx context.Context, in *CreateVacancyRequest, opts ...grpc.CallOption) (*CreateVacancyResponse, error)
+	// DeleteVacancy deletes an existing job vacancy by its ID.
+	DeleteVacancy(ctx context.Context, in *DeleteVacancyRequest, opts ...grpc.CallOption) (*DeleteVacancyResponse, error)
 }
 
 type vacancyServiceClient struct {
@@ -50,6 +53,16 @@ func (c *vacancyServiceClient) CreateVacancy(ctx context.Context, in *CreateVaca
 	return out, nil
 }
 
+func (c *vacancyServiceClient) DeleteVacancy(ctx context.Context, in *DeleteVacancyRequest, opts ...grpc.CallOption) (*DeleteVacancyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteVacancyResponse)
+	err := c.cc.Invoke(ctx, VacancyService_DeleteVacancy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VacancyServiceServer is the server API for VacancyService service.
 // All implementations must embed UnimplementedVacancyServiceServer
 // for forward compatibility.
@@ -58,6 +71,8 @@ func (c *vacancyServiceClient) CreateVacancy(ctx context.Context, in *CreateVaca
 type VacancyServiceServer interface {
 	// CreateVacancy creates a new job vacancy with the provided details.
 	CreateVacancy(context.Context, *CreateVacancyRequest) (*CreateVacancyResponse, error)
+	// DeleteVacancy deletes an existing job vacancy by its ID.
+	DeleteVacancy(context.Context, *DeleteVacancyRequest) (*DeleteVacancyResponse, error)
 	mustEmbedUnimplementedVacancyServiceServer()
 }
 
@@ -70,6 +85,9 @@ type UnimplementedVacancyServiceServer struct{}
 
 func (UnimplementedVacancyServiceServer) CreateVacancy(context.Context, *CreateVacancyRequest) (*CreateVacancyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateVacancy not implemented")
+}
+func (UnimplementedVacancyServiceServer) DeleteVacancy(context.Context, *DeleteVacancyRequest) (*DeleteVacancyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteVacancy not implemented")
 }
 func (UnimplementedVacancyServiceServer) mustEmbedUnimplementedVacancyServiceServer() {}
 func (UnimplementedVacancyServiceServer) testEmbeddedByValue()                        {}
@@ -110,6 +128,24 @@ func _VacancyService_CreateVacancy_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VacancyService_DeleteVacancy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteVacancyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VacancyServiceServer).DeleteVacancy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VacancyService_DeleteVacancy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VacancyServiceServer).DeleteVacancy(ctx, req.(*DeleteVacancyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VacancyService_ServiceDesc is the grpc.ServiceDesc for VacancyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +156,10 @@ var VacancyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateVacancy",
 			Handler:    _VacancyService_CreateVacancy_Handler,
+		},
+		{
+			MethodName: "DeleteVacancy",
+			Handler:    _VacancyService_DeleteVacancy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

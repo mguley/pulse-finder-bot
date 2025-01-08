@@ -13,4 +13,7 @@ option go_package = "infrastructure/proto/vacancy/gen;vacancyv1";
 service VacancyService {
   // CreateVacancy creates a new job vacancy with the provided details.
   rpc CreateVacancy (CreateVacancyRequest) returns (CreateVacancyResponse);
+
+  // DeleteVacancy deletes an existing job vacancy by its ID.
+  rpc DeleteVacancy (DeleteVacancyRequest) returns (DeleteVacancyResponse);
 }
