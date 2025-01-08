@@ -46,3 +46,15 @@ message CreateVacancyResponse {
   // location specifies the location of the job vacancy.
   string location = 6;
 }
+
+// DeleteVacancyRequest is the request message for deleting a job vacancy.
+message DeleteVacancyRequest {
+  // id is the unique identifier of the job vacancy to delete.
+  int64 id = 1;
+}
+
+// DeleteVacancyResponse is the response message for a successful vacancy deletion.
+message DeleteVacancyResponse {
+  // message is a confirmation message indicating the successful deletion.
+  string message = 1;
+}
