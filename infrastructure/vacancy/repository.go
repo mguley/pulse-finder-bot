@@ -4,6 +4,7 @@ import (
 	"context"
 	"domain/vacancy/entity"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -64,7 +65,7 @@ func (r *Repository) Fetch(
 
 // FetchBatch retrieves a batch of vacancies where the SentAt field is not set.
 func (r *Repository) FetchBatch(ctx context.Context, limit int) ([]*entity.Vacancy, error) {
-	filter := bson.M{"sent_at": bson.M{"$exists": false}}
+	filter := bson.M{"sent_at": primitive.NewDateTimeFromTime(time.Time{})}
 	opt := options.Find().SetLimit(int64(limit))
 
 	cursor, err := r.collection.Find(ctx, filter, opt)
