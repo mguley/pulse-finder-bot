@@ -1,4 +1,4 @@
-##### Pulse Finder Bot
+#### Pulse Finder Bot
 
 Pulse Finder Bot is an educational project designed to explore distributed system design, proxy management, and web scraping automation.
 
