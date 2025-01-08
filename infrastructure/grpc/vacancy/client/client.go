@@ -73,6 +73,19 @@ func (v *VacancyClient) CreateVacancy(
 	return resp, nil
 }
 
+// DeleteVacancy calls the VacancyService's DeleteVacancy RPC method.
+// It returns a confirmation message or an error if the call fails.
+func (v *VacancyClient) DeleteVacancy(ctx context.Context, id int64) (*vacancyv1.DeleteVacancyResponse, error) {
+	req := &vacancyv1.DeleteVacancyRequest{Id: id}
+
+	resp, err := v.client.DeleteVacancy(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("delete vacancy: %w", err)
+	}
+
+	return resp, nil
+}
+
 // Close closes the underlying gRPC connection.
 func (v *VacancyClient) Close() error {
 	return v.conn.Close()
