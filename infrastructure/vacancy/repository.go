@@ -4,6 +4,7 @@ import (
 	"context"
 	"domain/vacancy/entity"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -46,6 +47,28 @@ func (r *Repository) Fetch(
 		SetSort(bson.D{{Key: "posted_at", Value: -1}}) // Default sort by most recent
 
 	cursor, err := r.collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	defer func() {
+		if err = cursor.Close(ctx); err != nil {
+			fmt.Println("cursor.Close", err)
+		}
+	}()
+
+	var list []*entity.Vacancy
+	if err = cursor.All(ctx, &list); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return list, nil
+}
+
+// FetchBatch retrieves a batch of vacancies where the SentAt field is not set.
+func (r *Repository) FetchBatch(ctx context.Context, limit int) ([]*entity.Vacancy, error) {
+	filter := bson.M{"sent_at": primitive.NewDateTimeFromTime(time.Time{})}
+	opt := options.Find().SetLimit(int64(limit))
+
+	cursor, err := r.collection.Find(ctx, filter, opt)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}

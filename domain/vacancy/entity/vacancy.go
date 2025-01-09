@@ -15,4 +15,5 @@ type Vacancy struct {
 	Description string             `bson:"description" json:"description"` // A detailed description of the job vacancy.
 	PostedAt    time.Time          `bson:"posted_at" json:"postedAt"`      // The date and time when it was posted.
 	Location    string             `bson:"location" json:"location"`       // The location of the job vacancy.
+	SentAt      time.Time          `bson:"sent_at" json:"sentAt"`          // The timestamp when the vacancy was sent.
 }
