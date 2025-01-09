@@ -34,6 +34,19 @@ func (r *Repository) Save(ctx context.Context, vacancy *entity.Vacancy) error {
 	return nil
 }
 
+// Update updates an existing vacancy by ID.
+func (r *Repository) Update(ctx context.Context, vacancy *entity.Vacancy) error {
+	if vacancy.ID.IsZero() {
+		return fmt.Errorf("cannot update a vacancy with an empty ID")
+	}
+	filter := bson.M{"_id": vacancy.ID}
+	_, err := r.collection.ReplaceOne(ctx, filter, vacancy)
+	if err != nil {
+		return fmt.Errorf("update vacancy: %w", err)
+	}
+	return nil
+}
+
 // Fetch retrieves a list of vacancies with optional filters and pagination.
 func (r *Repository) Fetch(
 	ctx context.Context,

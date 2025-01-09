@@ -7,11 +7,13 @@ import (
 	"application/proxy/commands"
 	"application/proxy/services"
 	"application/proxy/strategies"
+	appScheduler "application/scheduler"
 	"application/source"
 	"application/source/beta"
 	"application/url/processor"
 	"application/url/sitemap"
 	"domain/html"
+	"domain/scheduler"
 	"infrastructure"
 	htmlBeta "infrastructure/html/source/beta"
 	"infrastructure/url/sitemap/fetcher"
@@ -45,6 +47,7 @@ type Container struct {
 	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
+	CronScheduler           dependency.LazyDependency[scheduler.Scheduler]
 }
 
 // NewContainer creates and returns a new instance of Container.
@@ -196,6 +199,22 @@ func NewContainer() *Container {
 			sourceFactory := c.SourceFactory.Get()
 			batchSize := c.Config.Get().SourceHandler.BatchSize
 			return processor.NewService(sourceFactory, batchSize)
+		},
+	}
+
+	// Cron
+	c.CronScheduler = dependency.LazyDependency[scheduler.Scheduler]{
+		InitFunc: func() scheduler.Scheduler {
+			infra := c.InfrastructureContainer.Get()
+			cfg := c.Config.Get()
+			repo := infra.VacancyRepository.Get()
+			aClient := infra.AuthClient.Get()
+			vClient := infra.VacancyClient.Get()
+			batchSize := 5
+			issuer := cfg.AuthServer.Issuer
+			scope := []string{"write"}
+			tickerTime := 15 * time.Minute
+			return appScheduler.NewCronScheduler(repo, aClient, vClient, batchSize, issuer, scope, tickerTime)
 		},
 	}
 
