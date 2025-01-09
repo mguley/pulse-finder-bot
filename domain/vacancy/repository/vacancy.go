@@ -11,6 +11,10 @@ type VacancyRepository interface {
 	// Returns an error if the operation fails.
 	Save(ctx context.Context, vacancy *entity.Vacancy) error
 
+	// Update updates an existing vacancy by ID.
+	// Returns an error if the operation fails.
+	Update(ctx context.Context, vacancy *entity.Vacancy) error
+
 	// Fetch retrieves a list of vacancies with optional filters.
 	// Returns an error if the operation fails.
 	Fetch(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entity.Vacancy, error)

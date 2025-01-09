@@ -16,6 +16,11 @@ help:
 run/api:
 	go run ./cmd/main
 
+## run/cron_scheduler: Run cron scheduler
+.PHONY: run/cron_scheduler
+run/cron_scheduler:
+	go run ./cmd/cron
+
 ## run/auth-grpc-client: Run the Auth gRPC client
 .PHONY: run/auth-grpc-client
 run/auth-grpc-client:
