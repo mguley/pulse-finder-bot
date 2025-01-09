@@ -21,7 +21,7 @@ type CronScheduler struct {
 	batchSize     int                          // Defines how many items are processed in a single batch.
 	tokenIssuer   string                       // Is the issuer field for the JWT token generation.
 	tokenScope    []string                     // Defines the scopes requested for the JWT token.
-	tickerTime    time.Duration                // Interval at which the CronScheduler triggers its job (e.g., every N seconds).
+	tickerTime    time.Duration                // Interval at which the CronScheduler triggers its job.
 }
 
 // NewCronScheduler creates a new instance of CronScheduler.
