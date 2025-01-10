@@ -44,7 +44,7 @@ func TestParser_ValidHTML(t *testing.T) {
 
 // TestParser_MissingElements tests parsing HTML with missing elements.
 func TestParser_MissingElements(t *testing.T) {
-	t.Skip("Skipping TestParser_ValidHTML temporarily, parser logic requires improvements (description field)")
+	t.Skip("Skipping TestParser_MissingElements temporarily, parser logic requires improvements (description field)")
 
 	container := SetupTestContainer(t)
 	parser := container.BetaHtmlParser.Get()
