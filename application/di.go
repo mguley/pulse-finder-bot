@@ -213,7 +213,7 @@ func NewContainer() *Container {
 			batchSize := 5
 			issuer := cfg.AuthServer.Issuer
 			scope := []string{"write"}
-			tickerTime := 15 * time.Minute
+			tickerTime := 15 * time.Second
 			return appScheduler.NewCronScheduler(repo, aClient, vClient, batchSize, issuer, scope, tickerTime)
 		},
 	}

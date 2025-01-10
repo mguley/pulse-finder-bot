@@ -157,6 +157,14 @@ build/auth-grpc-client/optimized:
 	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/auth/auth-grpc-client-o ./cmd/grpc/auth
 	@echo 'Build for Linux (amd64) complete (optimized).'
 
+## build/cron-scheduler/optimized: Build the cron scheduler binary
+.PHONY: build/cron-scheduler/optimized
+build/cron-scheduler/optimized:
+	@echo 'Building the cron scheduler binary with optimizations...'
+	@mkdir -p ./bin/cron
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -a -ldflags="-s -w" -o=./bin/cron/job-scheduler-o ./cmd/cron
+	@echo 'Build for Linux (amd64) complete (optimized).'
+
 # =============================================================================== #
 # PRODUCTION DEPLOYMENT TASKS
 # =============================================================================== #
@@ -165,6 +173,24 @@ build/auth-grpc-client/optimized:
 .PHONY: production/connect
 production/connect:
 	ssh bot@${PRODUCTION_HOST_IP}
+
+## production/deploy-scheduler-files: Deploy new binary
+.PHONY: production/deploy-scheduler-files
+production/deploy-scheduler-files:
+	@echo 'Deploying new binary ...'
+	rsync -P ./bin/cron/job-scheduler-o bot@${PRODUCTION_HOST_IP}:/tmp/job-scheduler-o
+	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
+	  sudo mkdir -p /opt/cron-scheduler && \
+	  sudo mv /tmp/job-scheduler-o /opt/cron-scheduler && \
+	  sudo chown -R bot:bot /opt/cron-scheduler && \
+	  sudo chmod +x /opt/cron-scheduler/job-scheduler-o '
+
+## production/deploy/cron-scheduler: Deploy application to production
+.PHONY: production/deploy/cron-scheduler
+production/deploy/cron-scheduler:
+	@$(MAKE) build/cron-scheduler/optimized
+	@$(MAKE) production/deploy-scheduler-files
+	@echo 'Deployment to production complete.'
 
 ## production/deploy-bot-files: Deploy new binary
 .PHONY: production/deploy-bot-files
