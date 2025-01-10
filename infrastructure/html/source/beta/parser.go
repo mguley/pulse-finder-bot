@@ -32,16 +32,16 @@ func (p *Parser) Parse(htmlContent string) (*dto.Vacancy, error) {
 	}
 
 	// Extract the company name from the specified selector
-	company := strings.TrimSpace(doc.Find("p.MuiTypography-root.MuiTypography-h3").First().Text())
+	company := strings.TrimSpace(doc.Find("h2.MuiTypography-root").First().Text())
 	if company == "" {
 		company = "Unknown Company"
 	}
 
 	// Extract the job description
 	_ = extractDescription(doc)
-	description := "Description not provided." // todo: improve
+	description := "-" // todo: improve
 
-	location := "Unknown Location"
+	location := extractLocation(doc)
 
 	// Populate the vacancy DTO with extracted data
 	v := dto.GetVacancy()
@@ -52,6 +52,37 @@ func (p *Parser) Parse(htmlContent string) (*dto.Vacancy, error) {
 	v.PostedAt = time.Now()
 
 	return v, nil
+}
+
+// extractLocation extracts the location from the HTML document.
+func extractLocation(doc *goquery.Document) string {
+	var location string
+
+	// Find all <div> elements with the "MuiBox-root" class
+	doc.Find("div.MuiBox-root").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		// Get the child <div> elements
+		childDivs := s.ChildrenFiltered("div")
+
+		// Ensure the <div> has exactly two child <div> elements
+		if childDivs.Length() == 2 {
+			// Check if the first child <div> has the text "Operating mode"
+			firstChild := childDivs.Eq(0)
+			if strings.TrimSpace(firstChild.Text()) != "Operating mode" {
+				return true // Continue if the text is not "Operating mode"
+			}
+
+			// Extract the text from the second child <div>
+			secondChild := childDivs.Eq(1)
+			location = strings.TrimSpace(secondChild.Text())
+			return false // Break the loop as we've found the desired element
+		}
+		return true // Continue loop if conditions are not met
+	})
+
+	if location == "" {
+		location = "Unknown Location" // Default value if not found
+	}
+	return location
 }
 
 // extractDescription extracts the job description from the HTML document.
