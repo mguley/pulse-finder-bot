@@ -27,16 +27,28 @@ func (p *Parser) Parse(htmlContent string) (*dto.Vacancy, error) {
 
 	// Extract the title from the <title> tag
 	title := strings.TrimSpace(doc.Find("title").Text())
+	if title == "" {
+		title = "Unknown Title"
+	}
+
 	// Extract the company name from the specified selector
 	company := strings.TrimSpace(doc.Find("p.MuiTypography-root.MuiTypography-h3").First().Text())
+	if company == "" {
+		company = "Unknown Company"
+	}
+
 	// Extract the job description
-	description := extractDescription(doc)
+	_ = extractDescription(doc)
+	description := "Description not provided." // todo: improve
+
+	location := "Unknown Location"
 
 	// Populate the vacancy DTO with extracted data
 	v := dto.GetVacancy()
 	v.Title = title
 	v.Company = company
 	v.Description = description
+	v.Location = location
 	v.PostedAt = time.Now()
 
 	return v, nil
