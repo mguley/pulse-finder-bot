@@ -7,6 +7,7 @@ import (
 	"fmt"
 	authClient "infrastructure/grpc/auth/client"
 	vacancyClient "infrastructure/grpc/vacancy/client"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/metadata"
@@ -14,14 +15,15 @@ import (
 
 // CronScheduler is a periodic job scheduler that transfers vacancies over gRPC.
 type CronScheduler struct {
-	repository    repository.VacancyRepository // Repository is used to fetch and update vacancy entities.
-	authClient    *authClient.AuthClient       // Manages gRPC client connection to AuthService.
-	vacancyClient *vacancyClient.VacancyClient // Manages gRPC client connection to VacancyService.
-	done          chan struct{}                // Signal channel used to stop the scheduler’s loop.
-	batchSize     int                          // Defines how many items are processed in a single batch.
-	tokenIssuer   string                       // Is the issuer field for the JWT token generation.
-	tokenScope    []string                     // Defines the scopes requested for the JWT token.
-	tickerTime    time.Duration                // Interval at which the CronScheduler triggers its job.
+	repository     repository.VacancyRepository // Repository is used to fetch and update vacancy entities.
+	authClient     *authClient.AuthClient       // Manages gRPC client connection to AuthService.
+	vacancyClient  *vacancyClient.VacancyClient // Manages gRPC client connection to VacancyService.
+	done           chan struct{}                // Signal channel used to stop the scheduler’s loop.
+	batchSize      int                          // Defines how many items are processed in a single batch.
+	tokenIssuer    string                       // Is the issuer field for the JWT token generation.
+	tokenScope     []string                     // Defines the scopes requested for the JWT token.
+	tickerTime     time.Duration                // Interval at which the CronScheduler triggers its job.
+	processedCount atomic.Int64                 // Tracks the total number of successfully processed vacancies.
 }
 
 // NewCronScheduler creates a new instance of CronScheduler.
@@ -111,10 +113,15 @@ func (s *CronScheduler) processBatch(ctx context.Context, batchSize int) (bool, 
 
 	for _, item := range items {
 		if err = s.sendVacancy(ctx, item); err != nil {
-			// Log error but do not return it so that the rest are still processed
 			fmt.Printf("[WARN] could not send vacancy (ID=%s): %v\n", item.ID.Hex(), err)
+			continue
 		}
+		s.processedCount.Add(1)
 	}
+
+	fmt.Printf("processed %d items in total\n", s.processedCount.Load())
+	fmt.Printf("sleeping...\n")
+	time.Sleep(s.tickerTime)
 	return true, nil
 }
 

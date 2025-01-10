@@ -46,6 +46,7 @@ On your first login, you'll be prompted to set a password for the `bot` user.
 make production/deploy/bot
 make production/deploy-auth-grpc-client
 make production/deploy-vacancy-grpc-client
+make production/deploy/cron-scheduler
 ```
 
 ---
