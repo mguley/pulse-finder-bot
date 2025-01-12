@@ -58,3 +58,11 @@ message DeleteVacancyResponse {
   // message is a confirmation message indicating the successful deletion.
   string message = 1;
 }
+
+// PurgeVacanciesRequest is the request message for purging all job vacancies.
+message PurgeVacanciesRequest {}
+
+// PurgeVacanciesResponse is the response message for a successful purge.
+message PurgeVacanciesResponse {
+  string message = 1;
+}
