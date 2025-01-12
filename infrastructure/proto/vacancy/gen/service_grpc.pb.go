@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	VacancyService_CreateVacancy_FullMethodName = "/vacancy.v1.VacancyService/CreateVacancy"
-	VacancyService_DeleteVacancy_FullMethodName = "/vacancy.v1.VacancyService/DeleteVacancy"
+	VacancyService_CreateVacancy_FullMethodName  = "/vacancy.v1.VacancyService/CreateVacancy"
+	VacancyService_DeleteVacancy_FullMethodName  = "/vacancy.v1.VacancyService/DeleteVacancy"
+	VacancyService_PurgeVacancies_FullMethodName = "/vacancy.v1.VacancyService/PurgeVacancies"
 )
 
 // VacancyServiceClient is the client API for VacancyService service.
@@ -33,6 +34,8 @@ type VacancyServiceClient interface {
 	CreateVacancy(ctx context.Context, in *CreateVacancyRequest, opts ...grpc.CallOption) (*CreateVacancyResponse, error)
 	// DeleteVacancy deletes an existing job vacancy by its ID.
 	DeleteVacancy(ctx context.Context, in *DeleteVacancyRequest, opts ...grpc.CallOption) (*DeleteVacancyResponse, error)
+	// PurgeVacancies removes all job vacancies from the database.
+	PurgeVacancies(ctx context.Context, in *PurgeVacanciesRequest, opts ...grpc.CallOption) (*PurgeVacanciesResponse, error)
 }
 
 type vacancyServiceClient struct {
@@ -63,6 +66,16 @@ func (c *vacancyServiceClient) DeleteVacancy(ctx context.Context, in *DeleteVaca
 	return out, nil
 }
 
+func (c *vacancyServiceClient) PurgeVacancies(ctx context.Context, in *PurgeVacanciesRequest, opts ...grpc.CallOption) (*PurgeVacanciesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PurgeVacanciesResponse)
+	err := c.cc.Invoke(ctx, VacancyService_PurgeVacancies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VacancyServiceServer is the server API for VacancyService service.
 // All implementations must embed UnimplementedVacancyServiceServer
 // for forward compatibility.
@@ -73,6 +86,8 @@ type VacancyServiceServer interface {
 	CreateVacancy(context.Context, *CreateVacancyRequest) (*CreateVacancyResponse, error)
 	// DeleteVacancy deletes an existing job vacancy by its ID.
 	DeleteVacancy(context.Context, *DeleteVacancyRequest) (*DeleteVacancyResponse, error)
+	// PurgeVacancies removes all job vacancies from the database.
+	PurgeVacancies(context.Context, *PurgeVacanciesRequest) (*PurgeVacanciesResponse, error)
 	mustEmbedUnimplementedVacancyServiceServer()
 }
 
@@ -88,6 +103,9 @@ func (UnimplementedVacancyServiceServer) CreateVacancy(context.Context, *CreateV
 }
 func (UnimplementedVacancyServiceServer) DeleteVacancy(context.Context, *DeleteVacancyRequest) (*DeleteVacancyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteVacancy not implemented")
+}
+func (UnimplementedVacancyServiceServer) PurgeVacancies(context.Context, *PurgeVacanciesRequest) (*PurgeVacanciesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PurgeVacancies not implemented")
 }
 func (UnimplementedVacancyServiceServer) mustEmbedUnimplementedVacancyServiceServer() {}
 func (UnimplementedVacancyServiceServer) testEmbeddedByValue()                        {}
@@ -146,6 +164,24 @@ func _VacancyService_DeleteVacancy_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VacancyService_PurgeVacancies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurgeVacanciesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VacancyServiceServer).PurgeVacancies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VacancyService_PurgeVacancies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VacancyServiceServer).PurgeVacancies(ctx, req.(*PurgeVacanciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VacancyService_ServiceDesc is the grpc.ServiceDesc for VacancyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -160,6 +196,10 @@ var VacancyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteVacancy",
 			Handler:    _VacancyService_DeleteVacancy_Handler,
+		},
+		{
+			MethodName: "PurgeVacancies",
+			Handler:    _VacancyService_PurgeVacancies_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

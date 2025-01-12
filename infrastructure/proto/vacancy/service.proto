@@ -16,4 +16,7 @@ service VacancyService {
 
   // DeleteVacancy deletes an existing job vacancy by its ID.
   rpc DeleteVacancy (DeleteVacancyRequest) returns (DeleteVacancyResponse);
+
+  // PurgeVacancies removes all job vacancies from the database.
+  rpc PurgeVacancies (PurgeVacanciesRequest) returns (PurgeVacanciesResponse);
 }
