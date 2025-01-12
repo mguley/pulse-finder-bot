@@ -19,61 +19,46 @@ const (
 	DefaultTimeout = 10 * time.Second
 )
 
+// Subcommand is an enum-like type for handling the different CLI subcommands.
+type Subcommand int
+
+const (
+	SubcommandUnknown Subcommand = iota
+	SubcommandCreate
+	SubcommandDelete
+	SubcommandPurge
+)
+
+// CreateOptions holds the CLI arguments for the `create` subcommand.
+type CreateOptions struct {
+	Title       string
+	Company     string
+	Description string
+	PostedAt    string
+	Location    string
+}
+
+// DeleteOptions holds the CLI arguments for the `delete` subcommand.
+type DeleteOptions struct {
+	ID int64
+}
+
 func main() {
-	// -------------------------------------------------
-	// Define subcommands
-	// -------------------------------------------------
-	createCmd := flag.NewFlagSet("create", flag.ExitOnError)
-	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
-
-	// -------------------------------------------------
-	// Define flags for the "create" subcommand
-	// -------------------------------------------------
-	createTitle := createCmd.String("title", "", "Job vacancy title (required)")
-	createCompany := createCmd.String("company", "", "Company name (required)")
-	createDescription := createCmd.String("desc", "", "Job vacancy description")
-	createPostedAt := createCmd.String("postedAt", "", "Posted date (format: YYYY-MM-DD)")
-	createLocation := createCmd.String("location", "", "Vacancy location")
-
-	// -------------------------------------------------
-	// Define flags for the "delete" subcommand
-	// -------------------------------------------------
-	deleteID := deleteCmd.Int64("id", 0, "Vacancy ID to delete (required)")
-
-	// -------------------------------------------------
-	// Check we have at least one subcommand
-	// -------------------------------------------------
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
-	}
-
-	// The subcommand is in os.Args[1] (e.g. "create" or "delete")
-	subcommand := os.Args[1]
-
-	// -------------------------------------------------
-	// Parse subcommand flags
-	// -------------------------------------------------
-	var err error
-	switch subcommand {
-	case "create":
-		err = createCmd.Parse(os.Args[2:])
-	case "delete":
-		err = deleteCmd.Parse(os.Args[2:])
-	default:
-		fmt.Printf("Unknown subcommand: %q\n\n", subcommand)
-		printUsage()
-		os.Exit(1)
-	}
+	// Parse subcommand.
+	subcommand, createOpts, deleteOpts, err := parseSubcommand(os.Args)
 	if err != nil {
-		log.Fatalf("Error parsing %q subcommand flags: %v", subcommand, err)
+		log.Println(err)
+		printUsage()
+		os.Exit(1)
+	}
+	if subcommand == SubcommandUnknown {
+		printUsage()
+		os.Exit(1)
 	}
 
-	// -------------------------------------------------
-	// Prepare environment and clients
-	// -------------------------------------------------
+	// Initialize application container and clients.
 	app := application.NewContainer()
-	config := app.Config.Get()
+	cfg := app.Config.Get()
 
 	aClient := app.InfrastructureContainer.Get().AuthClient.Get()
 	vClient := app.InfrastructureContainer.Get().VacancyClient.Get()
@@ -82,32 +67,89 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
 	defer cancel()
 
-	// -------------------------------------------------
 	// Acquire JWT token
-	// -------------------------------------------------
-	jwtToken, err := generateToken(ctx, aClient, config.AuthServer.Issuer, []string{"write"})
+	jwtToken, err := generateToken(ctx, aClient, cfg.AuthServer.Issuer, []string{"write"})
 	if err != nil {
 		log.Printf("Failed to generate token: %v", err)
 		return
 	}
 	log.Printf("JWT: %s", jwtToken)
 
-	// Attach the token to the outgoing context
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Bearer %s", jwtToken))
-
-	// -------------------------------------------------
-	// Execute the requested subcommand logic
-	// -------------------------------------------------
-	switch subcommand {
-	case "create":
-		err = runCreate(ctx, vClient, *createTitle, *createCompany, *createDescription, *createPostedAt, *createLocation)
-	case "delete":
-		err = runDelete(ctx, vClient, *deleteID)
-	}
-
-	if err != nil {
-		log.Printf("Error running %q subcommand: %v", subcommand, err)
+	if err = handleSubcommand(ctx, subcommand, vClient, createOpts, deleteOpts); err != nil {
+		log.Printf("Error running subcommand: %v", err)
 		return
+	}
+}
+
+// parseSubcommand inspects os.Args, determines which subcommand is being used, and parses any associated flags.
+// Returns a Subcommand type and any subcommand-specific options structs.
+func parseSubcommand(args []string) (Subcommand, *CreateOptions, *DeleteOptions, error) {
+	if len(args) < 2 {
+		// No subcommand provided
+		return SubcommandUnknown, nil, nil, errors.New("no subcommand provided")
+	}
+	subcommandStr := args[1]
+
+	// Define flag sets for each subcommand
+	createCmd := flag.NewFlagSet("create", flag.ExitOnError)
+	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
+	purgeCmd := flag.NewFlagSet("purge", flag.ExitOnError)
+
+	// Create subcommand flags
+	createOpts := &CreateOptions{}
+	createCmd.StringVar(&createOpts.Title, "title", "", "Job vacancy title")
+	createCmd.StringVar(&createOpts.Company, "company", "", "Company name")
+	createCmd.StringVar(&createOpts.Description, "desc", "", "Job vacancy description")
+	createCmd.StringVar(&createOpts.PostedAt, "postedAt", "", "Posted date (format: YYYY-MM-DD)")
+	createCmd.StringVar(&createOpts.Location, "location", "", "Vacancy location")
+
+	// Delete subcommand flags
+	deleteOpts := &DeleteOptions{}
+	deleteCmd.Int64Var(&deleteOpts.ID, "id", 0, "Vacancy ID to delete")
+
+	// Determine which subcommand and parse flags
+	switch subcommandStr {
+	case "create":
+		if err := createCmd.Parse(args[2:]); err != nil {
+			return SubcommandUnknown, nil, nil, fmt.Errorf("error parsing create flags: %w", err)
+		}
+		return SubcommandCreate, createOpts, nil, nil
+
+	case "delete":
+		if err := deleteCmd.Parse(args[2:]); err != nil {
+			return SubcommandUnknown, nil, nil, fmt.Errorf("error parsing delete flags: %w", err)
+		}
+		return SubcommandDelete, nil, deleteOpts, nil
+
+	case "purge":
+		if err := purgeCmd.Parse(args[2:]); err != nil {
+			return SubcommandUnknown, nil, nil, fmt.Errorf("error parsing purge flags: %w", err)
+		}
+		return SubcommandPurge, nil, nil, nil
+
+	default:
+		return SubcommandUnknown, nil, nil, fmt.Errorf("unknown subcommand: %q", subcommandStr)
+	}
+}
+
+// handleSubcommand dispatches the correct subcommand execution based on the Subcommand enum.
+func handleSubcommand(
+	ctx context.Context,
+	subcommand Subcommand,
+	vClient *vacancyClient.VacancyClient,
+	createOpts *CreateOptions,
+	deleteOpts *DeleteOptions,
+) error {
+	switch subcommand {
+	case SubcommandCreate:
+		return runCreate(ctx, vClient, createOpts)
+	case SubcommandDelete:
+		return runDelete(ctx, vClient, deleteOpts)
+	case SubcommandPurge:
+		return runPurge(ctx, vClient)
+	default:
+		return errors.New("unsupported subcommand")
 	}
 }
 
@@ -115,13 +157,13 @@ func main() {
 func runCreate(
 	ctx context.Context,
 	vClient *vacancyClient.VacancyClient,
-	title, company, desc, postedAt, location string,
+	opts *CreateOptions,
 ) error {
-	if title == "" || company == "" {
+	if opts.Title == "" || opts.Company == "" {
 		return errors.New("both --title and --company are required for create")
 	}
 
-	resp, err := vClient.CreateVacancy(ctx, title, company, desc, postedAt, location)
+	resp, err := vClient.CreateVacancy(ctx, opts.Title, opts.Company, opts.Description, opts.PostedAt, opts.Location)
 	if err != nil {
 		return fmt.Errorf("create vacancy: %w", err)
 	}
@@ -130,16 +172,26 @@ func runCreate(
 }
 
 // runDelete contains the logic for the "delete" subcommand.
-func runDelete(ctx context.Context, vClient *vacancyClient.VacancyClient, id int64) error {
-	if id <= 0 {
+func runDelete(ctx context.Context, vClient *vacancyClient.VacancyClient, opts *DeleteOptions) error {
+	if opts.ID <= 0 {
 		return errors.New("vacancy --id must be a positive integer")
 	}
 
-	resp, err := vClient.DeleteVacancy(ctx, id)
+	resp, err := vClient.DeleteVacancy(ctx, opts.ID)
 	if err != nil {
 		return fmt.Errorf("delete vacancy: %w", err)
 	}
 	log.Printf("Vacancy deleted successfully. Response: %+v", resp)
+	return nil
+}
+
+// runPurge contains the logic for the "purge" subcommand.
+func runPurge(ctx context.Context, vClient *vacancyClient.VacancyClient) error {
+	resp, err := vClient.PurgeVacancies(ctx)
+	if err != nil {
+		return fmt.Errorf("purge vacancies: %w", err)
+	}
+	log.Printf("All vacancies purged successfully. Response: %+v", resp)
 	return nil
 }
 
@@ -170,6 +222,7 @@ func printUsage() {
 Subcommands:
   create   Create a job vacancy
   delete   Delete an existing job vacancy
+  purge    Remove all job vacancies
 
 Examples:
   # Create a new vacancy:
@@ -182,6 +235,9 @@ Examples:
 
   # Delete a vacancy by ID:
   %[1]s delete --id=123
+
+  # Purge all vacancies:
+  %[1]s purge
 
 `, os.Args[0])
 }

@@ -120,8 +120,6 @@ func (s *CronScheduler) processBatch(ctx context.Context, batchSize int) (bool, 
 	}
 
 	fmt.Printf("processed %d items in total\n", s.processedCount.Load())
-	fmt.Printf("sleeping...\n")
-	time.Sleep(s.tickerTime)
 	return true, nil
 }
 

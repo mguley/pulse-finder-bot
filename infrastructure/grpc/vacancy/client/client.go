@@ -86,6 +86,19 @@ func (v *VacancyClient) DeleteVacancy(ctx context.Context, id int64) (*vacancyv1
 	return resp, nil
 }
 
+// PurgeVacancies calls the VacancyService's PurgeVacancies RPC method.
+// It removes all job vacancies from the database and returns a confirmation message or an error if the call fails.
+func (v *VacancyClient) PurgeVacancies(ctx context.Context) (*vacancyv1.PurgeVacanciesResponse, error) {
+	req := &vacancyv1.PurgeVacanciesRequest{}
+
+	resp, err := v.client.PurgeVacancies(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("purge vacancies: %w", err)
+	}
+
+	return resp, nil
+}
+
 // Close closes the underlying gRPC connection.
 func (v *VacancyClient) Close() error {
 	return v.conn.Close()
