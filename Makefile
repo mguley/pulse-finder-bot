@@ -210,9 +210,9 @@ production/deploy/bot:
 	@$(MAKE) production/deploy-bot-files
 	@echo 'Deployment to production complete.'
 
-## production/deploy-auth-grpc-client: Deploy the Auth gRPC client to production
-.PHONY: production/deploy-auth-grpc-client
-production/deploy-auth-grpc-client:
+## production/deploy-auth-grpc-files: Deploy the Auth gRPC client to production
+.PHONY: production/deploy-auth-grpc-files
+production/deploy-auth-grpc-files:
 	@echo 'Deploying new gRPC client binary ...'
 	rsync -P ./bin/auth/auth-grpc-client-o bot@${PRODUCTION_HOST_IP}:/tmp/auth-grpc-client-o
 	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
@@ -221,9 +221,16 @@ production/deploy-auth-grpc-client:
 	  sudo chown -R bot:bot /opt/auth-grpc-client && \
 	  sudo chmod +x /opt/auth-grpc-client/auth-grpc-client-o'
 
-## production/deploy-vacancy-grpc-client: Deploy the Vacancy gRPC client to production
-.PHONY: production/deploy-vacancy-grpc-client
-production/deploy-vacancy-grpc-client:
+## production/deploy/auth-client: Deploy application to production
+.PHONY: production/deploy/auth-client
+production/deploy/auth-client:
+	@$(MAKE) build/auth-grpc-client/optimized
+	@$(MAKE) production/deploy-auth-grpc-files
+	@echo 'Deployment to production complete.'
+
+## production/deploy-vacancy-grpc-files: Deploy the Vacancy gRPC client to production
+.PHONY: production/deploy-vacancy-grpc-files
+production/deploy-vacancy-grpc-files:
 	@echo 'Deploying new gRPC client binary ...'
 	rsync -P ./bin/vacancy/vacancy-grpc-client-o bot@${PRODUCTION_HOST_IP}:/tmp/vacancy-grpc-client-o
 	ssh -t bot@${PRODUCTION_HOST_IP} 'set -e; \
@@ -231,3 +238,10 @@ production/deploy-vacancy-grpc-client:
 	  sudo mv /tmp/vacancy-grpc-client-o /opt/vacancy-grpc-client && \
 	  sudo chown -R bot:bot /opt/vacancy-grpc-client && \
 	  sudo chmod +x /opt/vacancy-grpc-client/vacancy-grpc-client-o'
+
+## production/deploy/vacancy-client: Deploy application to production
+.PHONY: production/deploy/vacancy-client
+production/deploy/vacancy-client:
+	@$(MAKE) build/vacancy-grpc-client/optimized
+	@$(MAKE) production/deploy-vacancy-grpc-files
+	@echo 'Deployment to production complete.'
