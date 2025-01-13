@@ -9,12 +9,14 @@ import (
 	"application/proxy/strategies"
 	appScheduler "application/scheduler"
 	"application/source"
-	"application/source/beta"
+	sourceAlfa "application/source/alfa"
+	sourceBeta "application/source/beta"
 	"application/url/processor"
 	"application/url/sitemap"
 	"domain/html"
 	"domain/scheduler"
 	"infrastructure"
+	htmlAlfa "infrastructure/html/source/alfa"
 	htmlBeta "infrastructure/html/source/beta"
 	"infrastructure/url/sitemap/fetcher"
 	"infrastructure/url/sitemap/notifier"
@@ -29,18 +31,23 @@ import (
 // It acts as a central registry for services, ensuring that dependencies are managed in a lazy loaded manner.
 type Container struct {
 	Config                  dependency.LazyDependency[*config.Config]
-	SitemapService          dependency.LazyDependency[*sitemap.Service]
+	SitemapServiceXML       dependency.LazyDependency[*sitemap.Service]
+	SitemapServiceRSS       dependency.LazyDependency[*sitemap.Service]
 	SitemapFetcher          dependency.LazyDependency[*fetcher.Service]
 	SitemapNotifier         dependency.LazyDependency[*notifier.Service]
 	SitemapParser           dependency.LazyDependency[*parser.Service]
+	SitemapParserRSS        dependency.LazyDependency[*parser.RssFeed]
 	SitemapRepository       dependency.LazyDependency[*sitemapRepository.Service]
 	ProxyService            dependency.LazyDependency[*services.Service]
 	RetryStrategy           dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService         dependency.LazyDependency[*services.Identity]
 	CircuitManager          dependency.LazyDependency[*circuit.Manager]
+	AlfaHtmlFetcher         dependency.LazyDependency[html.Fetcher]
+	AlfaHtmlParser          dependency.LazyDependency[html.Parser]
+	AlfaHandler             dependency.LazyDependency[*sourceAlfa.Handler]
 	BetaHtmlFetcher         dependency.LazyDependency[html.Fetcher]
 	BetaHtmlParser          dependency.LazyDependency[html.Parser]
-	BetaHandler             dependency.LazyDependency[*beta.Handler]
+	BetaHandler             dependency.LazyDependency[*sourceBeta.Handler]
 	SourceFactory           dependency.LazyDependency[*source.Factory]
 	ProcessorService        dependency.LazyDependency[*processor.Service]
 	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
@@ -121,6 +128,34 @@ func NewContainer() *Container {
 	}
 
 	// Parser services
+	c.AlfaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
+		InitFunc: func() html.Fetcher {
+			maxBodySize := int64(10 * 1024 * 1024) // 10MB
+			htmlFetcher, err := htmlAlfa.NewFetcher(c.ProxyService.Get(), maxBodySize)
+			if err != nil {
+				log.Fatalf("failed to init fetcher: %v", err)
+			}
+			return htmlFetcher
+		},
+	}
+	c.AlfaHtmlParser = dependency.LazyDependency[html.Parser]{
+		InitFunc: func() html.Parser {
+			return htmlAlfa.NewParser()
+		},
+	}
+	c.AlfaHandler = dependency.LazyDependency[*sourceAlfa.Handler]{
+		InitFunc: func() *sourceAlfa.Handler {
+			url := c.Config.Get().SourceHandler.Alfa.SitemapURL
+			sitemapService := c.SitemapServiceRSS.Get()
+			circuitManager := c.CircuitManager.Get()
+			urlRepository := c.InfrastructureContainer.Get().UrlRepository.Get()
+			vacancyRepository := c.InfrastructureContainer.Get().VacancyRepository.Get()
+			htmlFetcher := c.AlfaHtmlFetcher.Get()
+			htmlParser := c.AlfaHtmlParser.Get()
+			return sourceAlfa.NewHandler(url, sitemapService, circuitManager, urlRepository,
+				vacancyRepository, htmlFetcher, htmlParser)
+		},
+	}
 	c.BetaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
 		InitFunc: func() html.Fetcher {
 			maxBodySize := int64(10 * 1024 * 1024) // 10MB
@@ -136,16 +171,16 @@ func NewContainer() *Container {
 			return htmlBeta.NewParser()
 		},
 	}
-	c.BetaHandler = dependency.LazyDependency[*beta.Handler]{
-		InitFunc: func() *beta.Handler {
+	c.BetaHandler = dependency.LazyDependency[*sourceBeta.Handler]{
+		InitFunc: func() *sourceBeta.Handler {
 			url := c.Config.Get().SourceHandler.Beta.SitemapURL
-			sitemapService := c.SitemapService.Get()
+			sitemapService := c.SitemapServiceXML.Get()
 			circuitManager := c.CircuitManager.Get()
 			urlRepository := c.InfrastructureContainer.Get().UrlRepository.Get()
 			vacancyRepository := c.InfrastructureContainer.Get().VacancyRepository.Get()
 			htmlFetcher := c.BetaHtmlFetcher.Get()
 			htmlParser := c.BetaHtmlParser.Get()
-			return beta.NewHandler(url, sitemapService, circuitManager, urlRepository,
+			return sourceBeta.NewHandler(url, sitemapService, circuitManager, urlRepository,
 				vacancyRepository, htmlFetcher, htmlParser)
 		},
 	}
@@ -174,21 +209,36 @@ func NewContainer() *Container {
 	c.SitemapParser = dependency.LazyDependency[*parser.Service]{
 		InitFunc: parser.NewService,
 	}
+	c.SitemapParserRSS = dependency.LazyDependency[*parser.RssFeed]{
+		InitFunc: parser.NewRssFeed,
+	}
 	c.SitemapRepository = dependency.LazyDependency[*sitemapRepository.Service]{
 		InitFunc: func() *sitemapRepository.Service {
 			return sitemapRepository.NewService(c.InfrastructureContainer.Get().UrlRepository.Get())
 		},
 	}
-	c.SitemapService = dependency.LazyDependency[*sitemap.Service]{
+	c.SitemapServiceXML = dependency.LazyDependency[*sitemap.Service]{
 		InitFunc: func() *sitemap.Service {
-			sitemapFetcher := c.SitemapFetcher.Get()
-			sitemapParser := c.SitemapParser.Get()
-			sitemapRepo := c.SitemapRepository.Get()
-			sitemapNotifier := c.SitemapNotifier.Get()
-			proxyClient := func() (*http.Client, error) {
-				return c.ProxyService.Get().HttpClient()
-			}
-			return sitemap.NewService(sitemapFetcher, sitemapParser, sitemapRepo, sitemapNotifier, proxyClient)
+			return sitemap.NewService(
+				sitemap.WithFetcher(c.SitemapFetcher.Get()),
+				sitemap.WithParser(c.SitemapParser.Get()),
+				sitemap.WithRepository(c.SitemapRepository.Get()),
+				sitemap.WithNotifier(c.SitemapNotifier.Get()),
+				sitemap.WithHTTPClient(func() (*http.Client, error) {
+					return c.ProxyService.Get().HttpClient()
+				}))
+		},
+	}
+	c.SitemapServiceRSS = dependency.LazyDependency[*sitemap.Service]{
+		InitFunc: func() *sitemap.Service {
+			return sitemap.NewService(
+				sitemap.WithFetcher(c.SitemapFetcher.Get()),
+				sitemap.WithParser(c.SitemapParserRSS.Get()),
+				sitemap.WithRepository(c.SitemapRepository.Get()),
+				sitemap.WithNotifier(c.SitemapNotifier.Get()),
+				sitemap.WithHTTPClient(func() (*http.Client, error) {
+					return c.ProxyService.Get().HttpClient()
+				}))
 		},
 	}
 	c.SourceFactory = dependency.LazyDependency[*source.Factory]{
