@@ -3,12 +3,19 @@ package main
 import (
 	"application"
 	"context"
+	"domain/source"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 )
+
+// HandlerRegistration holds the metadata for a source handler registration.
+type HandlerRegistration struct {
+	Name    string         // Unique name identifying the handler.
+	Handler source.Handler // The actual handler instance to be registered.
+}
 
 // setupGracefulShutdown handles termination signals.
 func setupGracefulShutdown(cancelFunc context.CancelFunc) {
@@ -23,18 +30,17 @@ func setupGracefulShutdown(cancelFunc context.CancelFunc) {
 
 // runProcessor initializes and runs the application processor.
 func runProcessor(ctx context.Context, c *application.Container) error {
-	// Initialize the processor service and source factory.
+	// Get the processor service and source factory from the application container.
 	processor := c.ProcessorService.Get()
 	sourceFactory := c.SourceFactory.Get()
 
-	// Register the source handler.
-	name := "beta"
-	handler := c.BetaHandler.Get()
-
-	if err := sourceFactory.Register(name, handler); err != nil {
-		return fmt.Errorf("%w", err)
+	// Dynamically register each handler.
+	for _, handler := range getItemsToProcess(c) {
+		if err := sourceFactory.Register(handler.Name, handler.Handler); err != nil {
+			return fmt.Errorf("register %s error: %v", handler.Name, err)
+		}
+		log.Printf("Registered source handler: %s", handler.Name)
 	}
-	log.Printf("Registered source handler: %s", name)
 
 	// Start the processor.
 	log.Println("Starting the processor...")
@@ -43,6 +49,21 @@ func runProcessor(ctx context.Context, c *application.Container) error {
 	return nil
 }
 
+// getItemsToProcess defines the handlers to be registered and processed.
+func getItemsToProcess(c *application.Container) []HandlerRegistration {
+	return []HandlerRegistration{
+		{
+			Name:    "alfa",
+			Handler: c.AlfaHandler.Get(),
+		},
+		{
+			Name:    "beta",
+			Handler: c.BetaHandler.Get(),
+		},
+	}
+}
+
+// main is the entry point for the application.
 func main() {
 	// Initialize application container.
 	c := application.NewContainer()

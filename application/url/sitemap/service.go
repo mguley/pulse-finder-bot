@@ -5,35 +5,70 @@ import (
 	"fmt"
 	"infrastructure/url/sitemap/fetcher"
 	"infrastructure/url/sitemap/notifier"
-	"infrastructure/url/sitemap/parser"
 	"infrastructure/url/sitemap/repository"
+	"io"
 	"net/http"
 )
+
+// Parser defines the contract for parser.
+type Parser interface {
+	Parse(body io.Reader) ([]string, error)
+}
+
+// Option defines a functional option for configuring the Sitemap Service.
+type Option func(service *Service)
 
 // Service orchestrates the processing of URLs from a sitemap.
 // It coordinates fetching, parsing, notifying and storing URLs.
 type Service struct {
 	fetcher  *fetcher.Service             // Service responsible for fetching HTML content.
-	parser   *parser.Service              // Service for parsing HTML content and extracting URLs.
+	parser   Parser                       // Service for parsing HTML content and extracting URLs.
 	repo     *repository.Service          // Service for storing extracted URLs into the data source.
 	notifier *notifier.Service            // Service for handling notifications (e.g., logging proxy IPs).
 	client   func() (*http.Client, error) // Function to provide an HTTP client.
 }
 
 // NewService creates and returns a new instance of the Sitemap service.
-func NewService(
-	f *fetcher.Service,
-	p *parser.Service,
-	repo *repository.Service,
-	n *notifier.Service,
-	client func() (*http.Client, error),
-) *Service {
-	return &Service{
-		fetcher:  f,
-		parser:   p,
-		repo:     repo,
-		notifier: n,
-		client:   client,
+func NewService(options ...Option) *Service {
+	s := &Service{}
+	for _, option := range options {
+		option(s)
+	}
+	return s
+}
+
+// WithFetcher sets the fetcher dependency.
+func WithFetcher(f *fetcher.Service) Option {
+	return func(s *Service) {
+		s.fetcher = f
+	}
+}
+
+// WithNotifier sets the notifier dependency.
+func WithNotifier(n *notifier.Service) Option {
+	return func(s *Service) {
+		s.notifier = n
+	}
+}
+
+// WithRepository sets the repository dependency.
+func WithRepository(r *repository.Service) Option {
+	return func(s *Service) {
+		s.repo = r
+	}
+}
+
+// WithHTTPClient sets the HTTP client provider.
+func WithHTTPClient(client func() (*http.Client, error)) Option {
+	return func(s *Service) {
+		s.client = client
+	}
+}
+
+// WithParser sets the parser dependency (XML or RSS).
+func WithParser(parser Parser) Option {
+	return func(s *Service) {
+		s.parser = parser
 	}
 }
 
