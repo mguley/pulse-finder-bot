@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/circuit"
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"application/proxy/services"
 	"application/proxy/strategies"
 	"domain/useragent"
@@ -24,8 +25,8 @@ type TestContainer struct {
 	HttpFactory         dependency.LazyDependency[*httpClient.Factory]
 	ProxyService        dependency.LazyDependency[*services.Service]
 	ProxyConnection     dependency.LazyDependency[*port.Connection]
-	AuthenticateCommand dependency.LazyDependency[*commands.AuthenticateCommand]
-	SignalCommand       dependency.LazyDependency[*commands.SignalCommand]
+	AuthenticateCommand dependency.LazyDependency[*control.AuthenticateCommand]
+	SignalCommand       dependency.LazyDependency[*control.SignalCommand]
 	StatusCommand       dependency.LazyDependency[*commands.StatusCommand]
 	RetryStrategy       dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService     dependency.LazyDependency[*services.Identity]
@@ -72,14 +73,14 @@ func NewTestContainer() *TestContainer {
 	}
 
 	// Proxy commands
-	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
-		InitFunc: func() *commands.AuthenticateCommand {
-			return commands.NewAuthenticateCommand(c.ProxyConnection.Get())
+	c.AuthenticateCommand = dependency.LazyDependency[*control.AuthenticateCommand]{
+		InitFunc: func() *control.AuthenticateCommand {
+			return control.NewAuthenticateCommand(c.ProxyConnection.Get())
 		},
 	}
-	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
-		InitFunc: func() *commands.SignalCommand {
-			return commands.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
+	c.SignalCommand = dependency.LazyDependency[*control.SignalCommand]{
+		InitFunc: func() *control.SignalCommand {
+			return control.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
 		},
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{

@@ -2,6 +2,7 @@ package services
 
 import (
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"application/proxy/strategies"
 	"fmt"
 	"infrastructure/proxy/port"
@@ -10,19 +11,19 @@ import (
 
 // Identity manages interactions with the proxy control port, including authentication, signaling, and status retrieval.
 type Identity struct {
-	conn      *port.Connection              // Connection to the proxy control port.
-	authCmd   *commands.AuthenticateCommand // Command to authenticate with the proxy.
-	signalCmd *commands.SignalCommand       // Command to signal a new circuit.
-	statusCmd *commands.StatusCommand       // Command to check the proxy circuit.
-	strategy  strategies.RetryStrategy      // Retry strategy for handling circuit change attempts.
-	url       string                        // URL for checking proxy status or connectivity.
+	conn      *port.Connection             // Connection to the proxy control port.
+	authCmd   *control.AuthenticateCommand // Command to authenticate with the proxy.
+	signalCmd *control.SignalCommand       // Command to signal a new circuit.
+	statusCmd *commands.StatusCommand      // Command to check the proxy circuit.
+	strategy  strategies.RetryStrategy     // Retry strategy for handling circuit change attempts.
+	url       string                       // URL for checking proxy status or connectivity.
 }
 
 // NewIdentity creates a new Identity instance.
 func NewIdentity(
 	conn *port.Connection,
-	authCmd *commands.AuthenticateCommand,
-	signalCmd *commands.SignalCommand,
+	authCmd *control.AuthenticateCommand,
+	signalCmd *control.SignalCommand,
 	statusCmd *commands.StatusCommand,
 	strategy strategies.RetryStrategy,
 	url string,

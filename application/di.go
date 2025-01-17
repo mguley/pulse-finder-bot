@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/circuit"
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"application/proxy/services"
 	"application/proxy/strategies"
 	appScheduler "application/scheduler"
@@ -50,8 +51,8 @@ type Container struct {
 	BetaHandler             dependency.LazyDependency[*sourceBeta.Handler]
 	SourceFactory           dependency.LazyDependency[*source.Factory]
 	ProcessorService        dependency.LazyDependency[*processor.Service]
-	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
-	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
+	AuthenticateCommand     dependency.LazyDependency[*control.AuthenticateCommand]
+	SignalCommand           dependency.LazyDependency[*control.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
 	CronScheduler           dependency.LazyDependency[scheduler.Scheduler]
@@ -68,16 +69,16 @@ func NewContainer() *Container {
 	}
 
 	// Proxy commands
-	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
-		InitFunc: func() *commands.AuthenticateCommand {
+	c.AuthenticateCommand = dependency.LazyDependency[*control.AuthenticateCommand]{
+		InitFunc: func() *control.AuthenticateCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
-			return commands.NewAuthenticateCommand(conn)
+			return control.NewAuthenticateCommand(conn)
 		},
 	}
-	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
-		InitFunc: func() *commands.SignalCommand {
+	c.SignalCommand = dependency.LazyDependency[*control.SignalCommand]{
+		InitFunc: func() *control.SignalCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
-			return commands.NewSignalCommand(conn, "NEWNYM")
+			return control.NewSignalCommand(conn, "NEWNYM")
 		},
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
