@@ -7,6 +7,7 @@ import (
 	"fmt"
 	authClient "infrastructure/grpc/auth/client"
 	vacancyClient "infrastructure/grpc/vacancy/client"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -62,8 +63,7 @@ func (s *CronScheduler) Start(ctx context.Context) {
 				fmt.Println("cron scheduler exit")
 				return
 			case <-ticker.C:
-				err := s.transferVacancies(ctx)
-				if err != nil {
+				if err := s.transferVacancies(ctx); err != nil {
 					fmt.Printf("transfer vacancies err: %v\n", err)
 				}
 			}
@@ -77,20 +77,25 @@ func (s *CronScheduler) Stop() {
 }
 
 // transferVacancies obtains a JWT token and processes the jobs in batches, sending them to the remote service.
-func (s *CronScheduler) transferVacancies(ctx context.Context) error {
+func (s *CronScheduler) transferVacancies(ctx context.Context) (err error) {
+	var (
+		jwtToken       string
+		outCtx         context.Context
+		hasMore        bool
+		maxConcurrency = 5
+	)
+
 	// Generate a fresh JWT token for gRPC calls.
-	jwtToken, err := s.generateToken(ctx)
-	if err != nil {
+	if jwtToken, err = s.generateToken(ctx); err != nil {
 		return fmt.Errorf("generate token: %w", err)
 	}
 
 	// Attach the token to the outgoing gRPC metadata.
-	outCtx := metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Bearer %s", jwtToken))
+	outCtx = metadata.AppendToOutgoingContext(ctx, "authorization", fmt.Sprintf("Bearer %s", jwtToken))
 
 	// Keep processing batches until no more items remain.
 	for {
-		hasMore, err := s.processBatch(outCtx, s.batchSize)
-		if err != nil {
+		if hasMore, err = s.processBatch(outCtx, s.batchSize, maxConcurrency); err != nil {
 			return fmt.Errorf("process batch: %w", err)
 		}
 		if !hasMore {
@@ -101,9 +106,14 @@ func (s *CronScheduler) transferVacancies(ctx context.Context) error {
 }
 
 // processBatch retrieves and processes a batch of vacancies.
-func (s *CronScheduler) processBatch(ctx context.Context, batchSize int) (bool, error) {
-	items, err := s.repository.FetchBatch(ctx, batchSize)
-	if err != nil {
+func (s *CronScheduler) processBatch(ctx context.Context, batchSize, maxConcurrency int) (hasMore bool, err error) {
+	var (
+		items     []*entity.Vacancy
+		semaphore = make(chan struct{}, maxConcurrency)
+		wg        sync.WaitGroup
+	)
+
+	if items, err = s.repository.FetchBatch(ctx, batchSize); err != nil {
 		return false, fmt.Errorf("fetch batch: %w", err)
 	}
 	if len(items) == 0 {
@@ -111,22 +121,41 @@ func (s *CronScheduler) processBatch(ctx context.Context, batchSize int) (bool, 
 		return false, nil
 	}
 
-	for _, item := range items {
-		if err = s.sendVacancy(ctx, item); err != nil {
-			fmt.Printf("[WARN] could not send vacancy (ID=%s): %v\n", item.ID.Hex(), err)
-			continue
-		}
-		s.processedCount.Add(1)
+	wg.Add(len(items))
+
+	for idx, item := range items {
+		// If the channel is full we block until some goroutine finishes and frees up a slot.
+		semaphore <- struct{}{}
+
+		go func(item *entity.Vacancy, id int) {
+			defer wg.Done()
+			defer func() { <-semaphore }() // frees up the slot when the goroutine completes
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("[ERROR] Recovered from panic in sendVacancy (ID=%s): %v\n", item.ID.Hex(), r)
+				}
+			}()
+
+			// Workload
+			if gErr := s.sendVacancy(ctx, item); gErr != nil {
+				fmt.Printf("[WARN] could not send vacancy (ID=%s): %v\n", item.ID.Hex(), gErr)
+				return
+			}
+			s.processedCount.Add(1)
+			fmt.Printf("[INFO] successfully send vacancy (ID=%s): sender ID=%d\n", item.ID.Hex(), id)
+		}(item, idx)
 	}
+
+	wg.Wait()
 
 	fmt.Printf("processed %d items in total\n", s.processedCount.Load())
 	return true, nil
 }
 
 // sendVacancy calls the vacancyClient to create a vacancy via gRPC and updates the local entity's SentAt field.
-func (s *CronScheduler) sendVacancy(ctx context.Context, item *entity.Vacancy) error {
+func (s *CronScheduler) sendVacancy(ctx context.Context, item *entity.Vacancy) (err error) {
 	// Create the vacancy on the remote service via gRPC.
-	_, err := s.vacancyClient.CreateVacancy(
+	_, err = s.vacancyClient.CreateVacancy(
 		ctx,
 		item.Title,
 		item.Company,
@@ -145,9 +174,8 @@ func (s *CronScheduler) sendVacancy(ctx context.Context, item *entity.Vacancy) e
 }
 
 // generateToken fetches a JWT token from the AuthClient using the configured issuer and scope.
-func (s *CronScheduler) generateToken(ctx context.Context) (string, error) {
-	token, err := s.authClient.GenerateToken(ctx, s.tokenIssuer, s.tokenScope)
-	if err != nil {
+func (s *CronScheduler) generateToken(ctx context.Context) (token string, err error) {
+	if token, err = s.authClient.GenerateToken(ctx, s.tokenIssuer, s.tokenScope); err != nil {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
 	return token, nil
