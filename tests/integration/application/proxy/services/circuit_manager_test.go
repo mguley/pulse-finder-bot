@@ -30,5 +30,5 @@ func TestManager_ChangeCircuit_VerificationFailure(t *testing.T) {
 	ip, err := manager.ChangeCircuit()
 	require.Error(t, err, "ChangeCircuit should fail due to verification error")
 	assert.Empty(t, ip, "should return an empty ip")
-	assert.Contains(t, err.Error(), "identity request", "Error message should indicate verification failure")
+	assert.Contains(t, err.Error(), "identity change", "Error message should indicate verification failure")
 }

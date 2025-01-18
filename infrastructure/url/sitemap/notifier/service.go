@@ -1,9 +1,9 @@
 package notifier
 
 import (
+	"application/proxy/commands"
 	"context"
 	"fmt"
-	"infrastructure/proxy"
 	"net/http"
 )
 
@@ -18,15 +18,17 @@ func NewService(url string) *Service {
 }
 
 // Notify retrieves and logs the proxy's IP address using the provided HTTP client.
-func (s *Service) Notify(ctx context.Context, client *http.Client) error {
-	checker := proxy.GetChecker().SetClient(client)
-	defer checker.Release()
+func (s *Service) Notify(ctx context.Context, client *http.Client) (err error) {
+	var result string
 
-	ip, err := checker.GetInfo(ctx, s.url)
-	if err != nil {
+	check := commands.GetCheckCommand()
+	defer check.Release()
+	check.SetClient(client, s.url)
+
+	if result, err = check.Execute(ctx); err != nil {
 		return fmt.Errorf("get info: %w", err)
 	}
 
-	fmt.Printf("We use: %s\n", ip)
+	fmt.Printf("We use: %s\n", result)
 	return nil
 }

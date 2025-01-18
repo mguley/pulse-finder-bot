@@ -4,6 +4,7 @@ import (
 	"application/config"
 	"application/dependency"
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"domain/useragent"
 	httpClient "infrastructure/http/client"
 	"infrastructure/proxy/client"
@@ -19,8 +20,8 @@ type TestContainer struct {
 	UserAgent           dependency.LazyDependency[useragent.Generator]
 	Socks5Client        dependency.LazyDependency[*client.Socks5Client]
 	HttpFactory         dependency.LazyDependency[*httpClient.Factory]
-	AuthenticateCommand dependency.LazyDependency[*commands.AuthenticateCommand]
-	SignalCommand       dependency.LazyDependency[*commands.SignalCommand]
+	AuthenticateCommand dependency.LazyDependency[*control.AuthenticateCommand]
+	SignalCommand       dependency.LazyDependency[*control.SignalCommand]
 	StatusCommand       dependency.LazyDependency[*commands.StatusCommand]
 }
 
@@ -35,7 +36,7 @@ func NewTestContainer() *TestContainer {
 		InitFunc: func() *port.Connection {
 			cfg := c.Config.Get()
 			address := cfg.Proxy.Host + ":" + cfg.Proxy.ControlPort
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return port.NewConnection(address, cfg.Proxy.ControlPassword, timeout)
 		},
 	}
@@ -56,24 +57,23 @@ func NewTestContainer() *TestContainer {
 	}
 
 	// Proxy commands
-	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
-		InitFunc: func() *commands.AuthenticateCommand {
-			return commands.NewAuthenticateCommand(c.ProxyConnection.Get())
+	c.AuthenticateCommand = dependency.LazyDependency[*control.AuthenticateCommand]{
+		InitFunc: func() *control.AuthenticateCommand {
+			return control.NewAuthenticateCommand(c.ProxyConnection.Get())
 		},
 	}
-	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
-		InitFunc: func() *commands.SignalCommand {
-			return commands.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
+	c.SignalCommand = dependency.LazyDependency[*control.SignalCommand]{
+		InitFunc: func() *control.SignalCommand {
+			return control.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
 		},
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
-			f := c.HttpFactory.Get()
-			s := c.Socks5Client.Get()
-			h := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
-			t := 10 * time.Second
-			return commands.NewStatusCommand(h, p, s, f, t)
+			factory := c.HttpFactory.Get()
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(proxyHost, proxyPort, factory, timeout)
 		},
 	}
 

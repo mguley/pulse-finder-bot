@@ -1,58 +1,63 @@
 package circuit
 
 import (
+	"application/proxy/commands"
 	"application/proxy/services"
 	"context"
 	"fmt"
-	"infrastructure/proxy"
 	"net/http"
+	"sync"
 )
 
 // Manager handles circuit changes and verification by interacting with identity and proxy services.
 type Manager struct {
-	identityService *services.Identity // Identity service for requesting a new circuit.
-	proxyService    *services.Service  // Proxy service for routing traffic through the proxy.
-	pingUrl         string             // URL used to verify the new circuit.
+	identityService *services.Identity // identityService manages requests to change proxy circuit.
+	proxyService    *services.Service  // proxyService manages HTTP clients configured to use SOCKS5 proxy.
+	mutex           sync.Mutex         // mutex to ensure thread-save access.
+	url             string             // url is the target endpoint for the HTTP GET request.
 }
 
 // NewManager creates a new Manager instance.
-func NewManager(i *services.Identity, p *services.Service, u string) *Manager {
-	return &Manager{identityService: i, proxyService: p, pingUrl: u}
+func NewManager(identity *services.Identity, proxy *services.Service, url string) *Manager {
+	return &Manager{identityService: identity, proxyService: proxy, url: url}
 }
 
-// ChangeCircuit requests a new circuit via the identity service and verifies it.
-func (m *Manager) ChangeCircuit() (string, error) {
-	// Request a new circuit from the identity service.
-	if err := m.identityService.Request(); err != nil {
-		return "", fmt.Errorf("identity request: %w", err)
+// ChangeCircuit requests a new circuit and validates it.
+func (m *Manager) ChangeCircuit() (result string, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	var (
+		client   *http.Client
+		response string
+	)
+
+	if err = m.identityService.Change(); err != nil {
+		return "", fmt.Errorf("identity change: %w", err)
 	}
 
-	// Retrieve an HTTP client from the proxy service.
-	client, err := m.proxyService.HttpClient()
-	if err != nil {
-		return "", fmt.Errorf("http client: %w", err)
+	if client, err = m.proxyService.HttpClient(); err != nil {
+		return "", fmt.Errorf("get http client: %w", err)
 	}
 	defer m.proxyService.Close()
 
-	// Verify the circuit change using the provided HTTP client.
-	ip, err := m.verify(client)
-	if err != nil {
-		return "", fmt.Errorf("verify: %w", err)
+	if response, err = m.validate(client); err != nil {
+		return "", fmt.Errorf("validate: %w", err)
 	}
-	return ip, nil
+	return response, nil
 }
 
-// verify validates the new circuit by performing an HTTP GET request to the ping URL.
-func (m *Manager) verify(client *http.Client) (string, error) {
-	checker := proxy.GetChecker().Reset()
-	defer checker.Release()
+// validate validates a new circuit by performing HTTP request to the validation URL.
+func (m *Manager) validate(client *http.Client) (result string, err error) {
+	check := commands.GetCheckCommand()
+	defer check.Release()
 
-	checker.SetClient(client)
+	check.SetClient(client, m.url)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Perform the verification request.
-	ip, err := checker.GetInfo(context.Background(), m.pingUrl)
-	if err != nil {
-		return "", fmt.Errorf("get info: %w", err)
+	if result, err = check.Execute(ctx); err != nil {
+		return "", fmt.Errorf("execute check: %w", err)
 	}
-	return ip, nil
+	return result, nil
 }

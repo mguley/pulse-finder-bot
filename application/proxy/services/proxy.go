@@ -19,44 +19,39 @@ type Service struct {
 }
 
 // NewService creates a new Service instance.
-func NewService(f *client.Factory, h, p string, t time.Duration) *Service {
-	return &Service{factory: f, host: h, port: p, timeout: t, mutex: sync.Mutex{}, httpClient: nil}
+func NewService(factory *client.Factory, host, port string, timeout time.Duration) *Service {
+	return &Service{factory: factory, host: host, port: port, timeout: timeout, mutex: sync.Mutex{}, httpClient: nil}
 }
 
-// HttpClient retrieves or initializes an HTTP client configured to use the SOCKS5 proxy.
-func (s *Service) HttpClient() (*http.Client, error) {
+// HttpClient provides HTTP client configured to use the SOCKS5 proxy.
+func (s *Service) HttpClient() (client *http.Client, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// If HTTP client already exists, return it.
 	if s.httpClient != nil {
 		return s.httpClient, nil
 	}
 
-	// Create a new HTTP client using the factory.
-	c, err := s.factory.CreateSocks5Client(s.host, s.port, s.timeout)
+	httpClient, err := s.factory.CreateSocks5Client(s.host, s.port, s.timeout)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
+		return nil, fmt.Errorf("create proxy http client: %v", err)
 	}
 
 	// Cache the HTTP client for reuse.
-	s.httpClient = c
+	s.httpClient = httpClient
 	return s.httpClient, nil
 }
 
-// Close releases resources used by the HTTP client.
+// Close releases resources.
 func (s *Service) Close() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.httpClient != nil {
-		// Close idle connections to release resources.
 		t, ok := s.httpClient.Transport.(*http.Transport)
 		if ok {
 			t.CloseIdleConnections()
 		}
-
-		// Clear the cached HTTP client.
 		s.httpClient = nil
 	}
 }

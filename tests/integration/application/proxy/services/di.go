@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/circuit"
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"application/proxy/services"
 	"application/proxy/strategies"
 	"domain/useragent"
@@ -24,8 +25,8 @@ type TestContainer struct {
 	HttpFactory         dependency.LazyDependency[*httpClient.Factory]
 	ProxyService        dependency.LazyDependency[*services.Service]
 	ProxyConnection     dependency.LazyDependency[*port.Connection]
-	AuthenticateCommand dependency.LazyDependency[*commands.AuthenticateCommand]
-	SignalCommand       dependency.LazyDependency[*commands.SignalCommand]
+	AuthenticateCommand dependency.LazyDependency[*control.AuthenticateCommand]
+	SignalCommand       dependency.LazyDependency[*control.SignalCommand]
 	StatusCommand       dependency.LazyDependency[*commands.StatusCommand]
 	RetryStrategy       dependency.LazyDependency[strategies.RetryStrategy]
 	IdentityService     dependency.LazyDependency[*services.Identity]
@@ -57,14 +58,14 @@ func NewTestContainer() *TestContainer {
 	c.ProxyConnection = dependency.LazyDependency[*port.Connection]{
 		InitFunc: func() *port.Connection {
 			address := fmt.Sprintf("%s:%s", c.Config.Get().Proxy.Host, c.Config.Get().Proxy.ControlPort)
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return port.NewConnection(address, c.Config.Get().Proxy.ControlPassword, timeout)
 		},
 	}
 	c.RetryStrategy = dependency.LazyDependency[strategies.RetryStrategy]{
 		InitFunc: func() strategies.RetryStrategy {
-			baseDelay := 5 * time.Second
-			maxDelay := 30 * time.Second
+			baseDelay := time.Duration(5) * time.Second
+			maxDelay := time.Duration(30) * time.Second
 			maxAttempts := 5
 			multiplier := 2.0
 			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
@@ -72,24 +73,23 @@ func NewTestContainer() *TestContainer {
 	}
 
 	// Proxy commands
-	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
-		InitFunc: func() *commands.AuthenticateCommand {
-			return commands.NewAuthenticateCommand(c.ProxyConnection.Get())
+	c.AuthenticateCommand = dependency.LazyDependency[*control.AuthenticateCommand]{
+		InitFunc: func() *control.AuthenticateCommand {
+			return control.NewAuthenticateCommand(c.ProxyConnection.Get())
 		},
 	}
-	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
-		InitFunc: func() *commands.SignalCommand {
-			return commands.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
+	c.SignalCommand = dependency.LazyDependency[*control.SignalCommand]{
+		InitFunc: func() *control.SignalCommand {
+			return control.NewSignalCommand(c.ProxyConnection.Get(), "NEWNYM")
 		},
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
 			factory := c.HttpFactory.Get()
-			sc := c.Socks5Client.Get()
-			host := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
-			return commands.NewStatusCommand(host, p, sc, factory, timeout)
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(proxyHost, proxyPort, factory, timeout)
 		},
 	}
 
@@ -97,10 +97,10 @@ func NewTestContainer() *TestContainer {
 	c.ProxyService = dependency.LazyDependency[*services.Service]{
 		InitFunc: func() *services.Service {
 			factory := c.HttpFactory.Get()
-			host := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
 			timeout := 10 * time.Second
-			return services.NewService(factory, host, p, timeout)
+			return services.NewService(factory, proxyHost, proxyPort, timeout)
 		},
 	}
 	c.IdentityService = dependency.LazyDependency[*services.Identity]{

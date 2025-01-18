@@ -5,6 +5,7 @@ import (
 	"application/dependency"
 	"application/proxy/circuit"
 	"application/proxy/commands"
+	"application/proxy/commands/control"
 	"application/proxy/services"
 	"application/proxy/strategies"
 	appScheduler "application/scheduler"
@@ -50,8 +51,8 @@ type Container struct {
 	BetaHandler             dependency.LazyDependency[*sourceBeta.Handler]
 	SourceFactory           dependency.LazyDependency[*source.Factory]
 	ProcessorService        dependency.LazyDependency[*processor.Service]
-	AuthenticateCommand     dependency.LazyDependency[*commands.AuthenticateCommand]
-	SignalCommand           dependency.LazyDependency[*commands.SignalCommand]
+	AuthenticateCommand     dependency.LazyDependency[*control.AuthenticateCommand]
+	SignalCommand           dependency.LazyDependency[*control.SignalCommand]
 	StatusCommand           dependency.LazyDependency[*commands.StatusCommand]
 	InfrastructureContainer dependency.LazyDependency[*infrastructure.Container]
 	CronScheduler           dependency.LazyDependency[scheduler.Scheduler]
@@ -68,26 +69,25 @@ func NewContainer() *Container {
 	}
 
 	// Proxy commands
-	c.AuthenticateCommand = dependency.LazyDependency[*commands.AuthenticateCommand]{
-		InitFunc: func() *commands.AuthenticateCommand {
+	c.AuthenticateCommand = dependency.LazyDependency[*control.AuthenticateCommand]{
+		InitFunc: func() *control.AuthenticateCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
-			return commands.NewAuthenticateCommand(conn)
+			return control.NewAuthenticateCommand(conn)
 		},
 	}
-	c.SignalCommand = dependency.LazyDependency[*commands.SignalCommand]{
-		InitFunc: func() *commands.SignalCommand {
+	c.SignalCommand = dependency.LazyDependency[*control.SignalCommand]{
+		InitFunc: func() *control.SignalCommand {
 			conn := c.InfrastructureContainer.Get().ProxyConnection.Get()
-			return commands.NewSignalCommand(conn, "NEWNYM")
+			return control.NewSignalCommand(conn, "NEWNYM")
 		},
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
 			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
-			client := c.InfrastructureContainer.Get().Socks5Client.Get()
 			host := c.Config.Get().Proxy.Host
 			port := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
-			return commands.NewStatusCommand(host, port, client, factory, timeout)
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(host, port, factory, timeout)
 		},
 	}
 
@@ -97,14 +97,14 @@ func NewContainer() *Container {
 			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
 			host := c.Config.Get().Proxy.Host
 			port := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return services.NewService(factory, host, port, timeout)
 		},
 	}
 	c.RetryStrategy = dependency.LazyDependency[strategies.RetryStrategy]{
 		InitFunc: func() strategies.RetryStrategy {
-			baseDelay := 5 * time.Second
-			maxDelay := 30 * time.Second
+			baseDelay := time.Duration(5) * time.Second
+			maxDelay := time.Duration(30) * time.Second
 			maxAttempts := 5
 			multiplier := 2.0
 			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
@@ -252,7 +252,7 @@ func NewContainer() *Container {
 		},
 	}
 
-	// Cron
+	// Scheduler
 	c.CronScheduler = dependency.LazyDependency[scheduler.Scheduler]{
 		InitFunc: func() scheduler.Scheduler {
 			infra := c.InfrastructureContainer.Get()
@@ -263,7 +263,7 @@ func NewContainer() *Container {
 			batchSize := 5
 			issuer := cfg.AuthServer.Issuer
 			scope := []string{"write"}
-			tickerTime := 15 * time.Second
+			tickerTime := time.Duration(15) * time.Second
 			return appScheduler.NewCronScheduler(repo, aClient, vClient, batchSize, issuer, scope, tickerTime)
 		},
 	}
