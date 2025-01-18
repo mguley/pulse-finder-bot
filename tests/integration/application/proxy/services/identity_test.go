@@ -12,6 +12,6 @@ func TestIdentity_Request(t *testing.T) {
 	identity := container.IdentityService.Get()
 
 	// Request new identity
-	err := identity.Request()
+	err := identity.Change()
 	assert.NoError(t, err, "Identity request should succeed")
 }

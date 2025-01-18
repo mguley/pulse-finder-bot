@@ -32,7 +32,7 @@ func (m *Manager) ChangeCircuit() (result string, err error) {
 		response string
 	)
 
-	if err = m.identityService.Request(); err != nil {
+	if err = m.identityService.Change(); err != nil {
 		return "", fmt.Errorf("identity change: %w", err)
 	}
 
