@@ -16,11 +16,11 @@ func TestFactory_CreateDefaultClient(t *testing.T) {
 	factory := container.HttpFactory.Get()
 
 	// Create a default client
-	client := factory.CreateDefaultClient()
+	client := factory.CreateDefaultClient(time.Duration(5) * time.Second)
 	require.NotNil(t, client, "Default HTTP client creation failed")
 
 	// Validate the User-Agent is set
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.ipify.org?format=json", http.NoBody)
 	require.NoError(t, err, "Failed to create HTTP request")
@@ -41,7 +41,7 @@ func TestFactory_CreateSocks5Client(t *testing.T) {
 	// Settings
 	h := config.Proxy.Host
 	p := config.Proxy.Port
-	timeout := 10 * time.Second
+	timeout := time.Duration(10) * time.Second
 
 	// Create a SOCKS5 client
 	client, err := factory.CreateSocks5Client(h, p, timeout)

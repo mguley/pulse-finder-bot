@@ -58,14 +58,14 @@ func NewTestContainer() *TestContainer {
 	c.ProxyConnection = dependency.LazyDependency[*port.Connection]{
 		InitFunc: func() *port.Connection {
 			address := fmt.Sprintf("%s:%s", c.Config.Get().Proxy.Host, c.Config.Get().Proxy.ControlPort)
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return port.NewConnection(address, c.Config.Get().Proxy.ControlPassword, timeout)
 		},
 	}
 	c.RetryStrategy = dependency.LazyDependency[strategies.RetryStrategy]{
 		InitFunc: func() strategies.RetryStrategy {
-			baseDelay := 5 * time.Second
-			maxDelay := 30 * time.Second
+			baseDelay := time.Duration(5) * time.Second
+			maxDelay := time.Duration(30) * time.Second
 			maxAttempts := 5
 			multiplier := 2.0
 			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
@@ -86,11 +86,10 @@ func NewTestContainer() *TestContainer {
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
 			factory := c.HttpFactory.Get()
-			sc := c.Socks5Client.Get()
-			host := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
-			return commands.NewStatusCommand(host, p, sc, factory, timeout)
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(proxyHost, proxyPort, factory, timeout)
 		},
 	}
 
@@ -98,10 +97,10 @@ func NewTestContainer() *TestContainer {
 	c.ProxyService = dependency.LazyDependency[*services.Service]{
 		InitFunc: func() *services.Service {
 			factory := c.HttpFactory.Get()
-			host := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
 			timeout := 10 * time.Second
-			return services.NewService(factory, host, p, timeout)
+			return services.NewService(factory, proxyHost, proxyPort, timeout)
 		},
 	}
 	c.IdentityService = dependency.LazyDependency[*services.Identity]{

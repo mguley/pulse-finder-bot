@@ -36,7 +36,7 @@ func NewTestContainer() *TestContainer {
 		InitFunc: func() *port.Connection {
 			cfg := c.Config.Get()
 			address := cfg.Proxy.Host + ":" + cfg.Proxy.ControlPort
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return port.NewConnection(address, cfg.Proxy.ControlPassword, timeout)
 		},
 	}
@@ -69,12 +69,11 @@ func NewTestContainer() *TestContainer {
 	}
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
-			f := c.HttpFactory.Get()
-			s := c.Socks5Client.Get()
-			h := c.Config.Get().Proxy.Host
-			p := c.Config.Get().Proxy.Port
-			t := 10 * time.Second
-			return commands.NewStatusCommand(h, p, s, f, t)
+			factory := c.HttpFactory.Get()
+			proxyHost := c.Config.Get().Proxy.Host
+			proxyPort := c.Config.Get().Proxy.Port
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(proxyHost, proxyPort, factory, timeout)
 		},
 	}
 

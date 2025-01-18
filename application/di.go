@@ -84,11 +84,10 @@ func NewContainer() *Container {
 	c.StatusCommand = dependency.LazyDependency[*commands.StatusCommand]{
 		InitFunc: func() *commands.StatusCommand {
 			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
-			client := c.InfrastructureContainer.Get().Socks5Client.Get()
 			host := c.Config.Get().Proxy.Host
 			port := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
-			return commands.NewStatusCommand(host, port, client, factory, timeout)
+			timeout := time.Duration(10) * time.Second
+			return commands.NewStatusCommand(host, port, factory, timeout)
 		},
 	}
 
@@ -98,14 +97,14 @@ func NewContainer() *Container {
 			factory := c.InfrastructureContainer.Get().HttpFactory.Get()
 			host := c.Config.Get().Proxy.Host
 			port := c.Config.Get().Proxy.Port
-			timeout := 10 * time.Second
+			timeout := time.Duration(10) * time.Second
 			return services.NewService(factory, host, port, timeout)
 		},
 	}
 	c.RetryStrategy = dependency.LazyDependency[strategies.RetryStrategy]{
 		InitFunc: func() strategies.RetryStrategy {
-			baseDelay := 5 * time.Second
-			maxDelay := 30 * time.Second
+			baseDelay := time.Duration(5) * time.Second
+			maxDelay := time.Duration(30) * time.Second
 			maxAttempts := 5
 			multiplier := 2.0
 			return strategies.NewExponentialBackoffStrategy(baseDelay, maxDelay, maxAttempts, multiplier)
@@ -253,7 +252,7 @@ func NewContainer() *Container {
 		},
 	}
 
-	// Cron
+	// Scheduler
 	c.CronScheduler = dependency.LazyDependency[scheduler.Scheduler]{
 		InitFunc: func() scheduler.Scheduler {
 			infra := c.InfrastructureContainer.Get()
@@ -264,7 +263,7 @@ func NewContainer() *Container {
 			batchSize := 5
 			issuer := cfg.AuthServer.Issuer
 			scope := []string{"write"}
-			tickerTime := 15 * time.Second
+			tickerTime := time.Duration(15) * time.Second
 			return appScheduler.NewCronScheduler(repo, aClient, vClient, batchSize, issuer, scope, tickerTime)
 		},
 	}
