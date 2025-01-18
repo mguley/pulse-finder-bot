@@ -260,7 +260,7 @@ func NewContainer() *Container {
 			repo := infra.VacancyRepository.Get()
 			aClient := infra.AuthClient.Get()
 			vClient := infra.VacancyClient.Get()
-			batchSize := 5
+			batchSize := 50
 			issuer := cfg.AuthServer.Issuer
 			scope := []string{"write"}
 			tickerTime := time.Duration(15) * time.Second

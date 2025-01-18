@@ -121,15 +121,22 @@ func (s *CronScheduler) processBatch(ctx context.Context, batchSize, maxConcurre
 		return false, nil
 	}
 
+	// Pre-fill a channel with concurrency slot IDs (1...maxConcurrency).
+	slots := make(chan int, maxConcurrency)
+	for i := 1; i <= maxConcurrency; i++ {
+		slots <- i
+	}
+
 	wg.Add(len(items))
 
-	for idx, item := range items {
+	for _, item := range items {
 		// If the channel is full we block until some goroutine finishes and frees up a slot.
 		semaphore <- struct{}{}
 
-		go func(item *entity.Vacancy, id int) {
+		go func(item *entity.Vacancy, slotId int) {
 			defer wg.Done()
-			defer func() { <-semaphore }() // frees up the slot when the goroutine completes
+			defer func() { <-semaphore }()     // frees up the slot when the goroutine completes
+			defer func() { slots <- slotId }() // put slot ID back, so the next job can reuse it
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Printf("[ERROR] Recovered from panic in sendVacancy (ID=%s): %v\n", item.ID.Hex(), r)
@@ -142,8 +149,8 @@ func (s *CronScheduler) processBatch(ctx context.Context, batchSize, maxConcurre
 				return
 			}
 			s.processedCount.Add(1)
-			fmt.Printf("[INFO] successfully send vacancy (ID=%s): sender ID=%d\n", item.ID.Hex(), id)
-		}(item, idx)
+			fmt.Printf("[INFO] successfully sent vacancy (ID=%s): concurrency slot=%d\n", item.ID.Hex(), slotId)
+		}(item, <-slots)
 	}
 
 	wg.Wait()
