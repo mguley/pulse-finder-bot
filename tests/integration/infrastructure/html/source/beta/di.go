@@ -11,6 +11,7 @@ import (
 	"infrastructure/proxy/client"
 	"infrastructure/proxy/client/agent"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -58,12 +59,15 @@ func NewTestContainer() *TestContainer {
 	}
 	c.BetaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
 		InitFunc: func() html.Fetcher {
-			maxBodySize := int64(10 * 1024 * 1024)
-			fetcher, err := htmlBeta.NewFetcher(c.ProxyService.Get(), maxBodySize)
-			if err != nil {
-				log.Fatalf("failed to init fetcher: %v", err)
+			var (
+				maxBodySize   = int64(10 * 1024 * 1024)
+				fetcherClient *http.Client
+				err           error
+			)
+			if fetcherClient, err = c.ProxyService.Get().HttpClient(); err != nil {
+				log.Fatalf("get proxy http client: %v", err)
 			}
-			return fetcher
+			return htmlBeta.NewFetcher(fetcherClient, maxBodySize)
 		},
 	}
 	c.BetaHtmlParser = dependency.LazyDependency[html.Parser]{

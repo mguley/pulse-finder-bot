@@ -2,6 +2,7 @@ package alfa
 
 import (
 	"application/proxy/circuit"
+	"application/url/processor/dto"
 	"application/url/sitemap"
 	"context"
 	"domain/html"
@@ -10,6 +11,7 @@ import (
 	vacancyEntity "domain/vacancy/entity"
 	vacancyRepository "domain/vacancy/repository"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -46,115 +48,129 @@ func NewHandler(
 }
 
 // ProcessURLs retrieves and processes sitemap URLs.
-func (h *Handler) ProcessURLs(ctx context.Context) error {
-	if err := h.sitemapService.ProcessUrls(ctx, h.url); err != nil {
+func (h *Handler) ProcessURLs(ctx context.Context) (err error) {
+	if err = h.sitemapService.ProcessUrls(ctx, h.url); err != nil {
 		return fmt.Errorf("process sitemap urls: %w", err)
 	}
 	return nil
 }
 
 // ProcessHTML processes URLs in batches with a delay.
-func (h *Handler) ProcessHTML(ctx context.Context, batchSize int) error {
+func (h *Handler) ProcessHTML(ctx context.Context, batchSize int) (err error) {
+	var (
+		maxConcurrency = 5
+		hasMore        bool
+		delayTime      = time.Duration(15) * time.Second
+	)
+
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			fmt.Println("Sleeping for 15 seconds...")
-			time.Sleep(time.Duration(15) * time.Second)
-
-			// Process a batch and determine if there are more URLs to process
-			hasMore, err := h.processBatch(ctx, batchSize)
-			if err != nil {
-				return fmt.Errorf("process batch: %w", err)
-			}
-
-			// Exit if there are no more URLs to process
-			if !hasMore {
-				fmt.Println("All URLs processed successfully")
-				return nil
-			}
+		// Attempt to process a batch of URLs
+		if hasMore, err = h.processBatch(ctx, batchSize, maxConcurrency); err != nil {
+			return fmt.Errorf("process batch: %w", err)
 		}
+		if !hasMore {
+			return nil
+		}
+
+		// Delay before the next iteration
+		fmt.Println("Sleeping...")
+		time.Sleep(delayTime)
 	}
 }
 
-// processBatch retrieves and processes a batch of URLs.
-func (h *Handler) processBatch(ctx context.Context, batchSize int) (bool, error) {
-	// Fetch a batch of unprocessed URLs with the "pending" status.
-	urls, err := h.urlRepository.FetchBatch(ctx, "pending", batchSize)
-	if err != nil {
+// processBatch fetches a batch of URLs and processes them respecting the maxConcurrency limit.
+func (h *Handler) processBatch(ctx context.Context, batchSize, maxConcurrency int) (hasMore bool, err error) {
+	var (
+		urls         []*entity.Url
+		status       = "pending"
+		switchResult string
+	)
+
+	// Change identity
+	if switchResult, err = h.circuitManager.ChangeCircuit(); err != nil {
+		return false, fmt.Errorf("change circuit: %w", err)
+	}
+	fmt.Printf("Switch Result: %s\n", switchResult)
+
+	if urls, err = h.urlRepository.FetchBatch(ctx, status, batchSize); err != nil {
 		return false, fmt.Errorf("fetch batch: %w", err)
 	}
-
-	// Exit if there are no URLs to process.
 	if len(urls) == 0 {
-		fmt.Println("No more URLs to process")
 		return false, nil
 	}
 
-	// Switch proxy circuit
-	if err = h.switchCircuit(); err != nil {
-		return true, fmt.Errorf("switch circuit: %w", err)
-	}
+	var (
+		semaphore = make(chan struct{}, maxConcurrency)
+		wg        sync.WaitGroup
+	)
 
-	// Process each URL in the batch
+	wg.Add(len(urls))
 	for _, url := range urls {
-		if err = h.processSingleURL(ctx, url); err != nil {
-			fmt.Printf("process url %s failed: %v", url, err)
-		}
+		semaphore <- struct{}{}
+
+		go func(entity *entity.Url) {
+			defer wg.Done()
+			defer func() { <-semaphore }()
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("[ERROR] Recovered from panic in processUrl for %s: %v\n", entity.Address, r)
+				}
+			}()
+
+			// Workload
+			if pErr := h.processUrl(ctx, entity); pErr != nil {
+				fmt.Printf("[WARN] failed to process URL %s: %v\n", entity.Address, pErr)
+				return
+			}
+		}(url)
 	}
+	wg.Wait()
+
+	// There might be more items in subsequent batches
 	return true, nil
 }
 
-// processSingleURL fetches, parses, and saves data for a single URL.
-func (h *Handler) processSingleURL(ctx context.Context, url *entity.Url) error {
-	processedTime := time.Now()
+// processUrl fetches, parses, and saves data for a single URL.
+func (h *Handler) processUrl(ctx context.Context, url *entity.Url) (err error) {
+	var (
+		processedTime = time.Now()
+		body          string
+		result        *dto.Vacancy
+		vacancy       = &vacancyEntity.Vacancy{}
+	)
 
 	// Fetch raw HTML content from the URL.
-	raw, err := h.fetcher.Fetch(ctx, url.Address)
-	if err != nil {
-		if err = h.markStatus(ctx, url, "failed", processedTime); err != nil {
+	if body, err = h.fetcher.Fetch(ctx, url.Address); err != nil {
+		if err = h.updateStatus(ctx, url, "failed", processedTime); err != nil {
 			return fmt.Errorf("%w", err)
 		}
 	}
 
 	// Parse the fetched HTML into structured format.
-	data, err := h.parser.Parse(raw)
-	if err != nil {
+	if result, err = h.parser.Parse(body); err != nil {
 		return fmt.Errorf("parse url, %s: %w", url.Address, err)
 	}
-	defer data.Release()
+	defer result.Release()
 
-	// Map DTO to entity and save
-	v := &vacancyEntity.Vacancy{}
-	data.ToEntity(v)
-	if err = h.vacancyRepository.Save(ctx, v); err != nil {
-		return fmt.Errorf("save vacancy, %s: %w", v, err)
+	// Save
+	result.ToEntity(vacancy)
+	if err = h.vacancyRepository.Save(ctx, vacancy); err != nil {
+		return fmt.Errorf("save vacancy, %s: %w", vacancy, err)
 	}
 
 	// Update URL status
-	if err = h.markStatus(ctx, url, "success", processedTime); err != nil {
-		return fmt.Errorf("mark vacancy, %s: %w", url, err)
+	if err = h.updateStatus(ctx, url, "success", processedTime); err != nil {
+		return fmt.Errorf("%w", err)
 	}
 
-	fmt.Printf("Processed URL %s\n", url.Address)
+	fmt.Printf("[INFO] successfully processed URL: %s\n", url.Address)
 	return nil
 }
 
-// switchCircuit switches the proxy circuit and logs the new IP.
-func (h *Handler) switchCircuit() error {
-	ip, err := h.circuitManager.ChangeCircuit()
-	if err != nil {
-		return fmt.Errorf("change circuit: %w", err)
-	}
-	fmt.Printf("Using new circuit ip: %s\n", ip)
-	return nil
-}
-
-// markStatus marks the processed URL with a provided status.
-func (h *Handler) markStatus(ctx context.Context, url *entity.Url, status string, processedTime time.Time) error {
-	if err := h.urlRepository.UpdateStatus(ctx, url.ID.Hex(), status, &processedTime); err != nil {
-		return fmt.Errorf("update url status: %w", err)
+// updateStatus updates information about the processed URL.
+func (h *Handler) updateStatus(ctx context.Context, entity *entity.Url, status string, time time.Time) (err error) {
+	if err = h.urlRepository.UpdateStatus(ctx, entity.ID.Hex(), status, &time); err != nil {
+		return fmt.Errorf("update status: %w", err)
 	}
 	return nil
 }

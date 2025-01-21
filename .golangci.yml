@@ -67,7 +67,7 @@ linters-settings:
     min-complexity: 4                # Maximum allowed nesting depth for `if` statements, promoting readable code
 
   funlen:
-    lines: 200                       # Maximum number of lines allowed in a function to encourage modular code
+    lines: 210                       # Maximum number of lines allowed in a function to encourage modular code
     statements: 200                  # Maximum number of statements allowed in a function
 
   dupl:

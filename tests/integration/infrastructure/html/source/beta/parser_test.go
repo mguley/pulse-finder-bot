@@ -11,7 +11,7 @@ import (
 func TestParser_ValidHTML(t *testing.T) {
 	t.Skip("Skipping TestParser_ValidHTML temporarily, parser logic requires improvements (description field)")
 
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	parser := container.BetaHtmlParser.Get()
 
 	// Example valid HTML content
@@ -46,7 +46,7 @@ func TestParser_ValidHTML(t *testing.T) {
 func TestParser_MissingElements(t *testing.T) {
 	t.Skip("Skipping TestParser_MissingElements temporarily, parser logic requires improvements (description field)")
 
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	parser := container.BetaHtmlParser.Get()
 
 	// HTML content missing company and description
@@ -69,7 +69,7 @@ func TestParser_MissingElements(t *testing.T) {
 
 // TestParser_MalformedHTML tests parsing a malformed HTML document.
 func TestParser_MalformedHTML(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	parser := container.BetaHtmlParser.Get()
 
 	// Malformed HTML content
@@ -90,7 +90,7 @@ func TestParser_MalformedHTML(t *testing.T) {
 
 // TestParser_EmptyHTML tests parsing an empty HTML document.
 func TestParser_EmptyHTML(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	parser := container.BetaHtmlParser.Get()
 
 	// Empty HTML content
