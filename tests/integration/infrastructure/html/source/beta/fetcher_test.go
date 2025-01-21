@@ -11,7 +11,7 @@ import (
 
 // TestFetcher_FetchValidURL tests fetching a valid URL.
 func TestFetcher_FetchValidURL(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	fetcher := container.BetaHtmlFetcher.Get()
 	url := container.Config.Get().Proxy.PingUrl
 
@@ -26,7 +26,7 @@ func TestFetcher_FetchValidURL(t *testing.T) {
 
 // TestFetcher_FetchInvalidURL tests fetching an invalid URL.
 func TestFetcher_FetchInvalidURL(t *testing.T) {
-	container := SetupTestContainer(t)
+	container := SetupTestContainer()
 	fetcher := container.BetaHtmlFetcher.Get()
 
 	// Invalid URL to fetch

@@ -1,8 +1,6 @@
 package beta
 
-import "testing"
-
 // SetupTestContainer initializes the TestContainer and handles cleanup.
-func SetupTestContainer(t *testing.T) *TestContainer {
+func SetupTestContainer() *TestContainer {
 	return NewTestContainer()
 }
