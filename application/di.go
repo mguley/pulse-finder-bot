@@ -130,12 +130,15 @@ func NewContainer() *Container {
 	// Parser services
 	c.AlfaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
 		InitFunc: func() html.Fetcher {
-			maxBodySize := int64(10 * 1024 * 1024) // 10MB
-			htmlFetcher, err := htmlAlfa.NewFetcher(c.ProxyService.Get(), maxBodySize)
-			if err != nil {
-				log.Fatalf("failed to init fetcher: %v", err)
+			var (
+				maxBodySize = int64(10 * 1024 * 1024) // 10MB
+				httpClient  *http.Client
+				err         error
+			)
+			if httpClient, err = c.ProxyService.Get().HttpClient(); err != nil {
+				log.Fatalf("get proxy http client: %v", err)
 			}
-			return htmlFetcher
+			return htmlAlfa.NewFetcher(httpClient, maxBodySize)
 		},
 	}
 	c.AlfaHtmlParser = dependency.LazyDependency[html.Parser]{
@@ -158,12 +161,15 @@ func NewContainer() *Container {
 	}
 	c.BetaHtmlFetcher = dependency.LazyDependency[html.Fetcher]{
 		InitFunc: func() html.Fetcher {
-			maxBodySize := int64(10 * 1024 * 1024) // 10MB
-			htmlFetcher, err := htmlBeta.NewFetcher(c.ProxyService.Get(), maxBodySize)
-			if err != nil {
-				log.Fatalf("failed to init fetcher: %v", err)
+			var (
+				maxBodySize = int64(10 * 1024 * 1024) // 10MB
+				httpClient  *http.Client
+				err         error
+			)
+			if httpClient, err = c.ProxyService.Get().HttpClient(); err != nil {
+				log.Fatalf("get proxy http client: %v", err)
 			}
-			return htmlFetcher
+			return htmlBeta.NewFetcher(httpClient, maxBodySize)
 		},
 	}
 	c.BetaHtmlParser = dependency.LazyDependency[html.Parser]{

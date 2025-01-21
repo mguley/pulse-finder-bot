@@ -1,66 +1,62 @@
 package beta
 
 import (
-	"application/proxy/services"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 )
 
-// HTTPClient defines the interface for making HTTP requests.
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
+// HttpClient defines an interface for making HTTP requests and managing connections.
+type HttpClient interface {
+	// Do sends an HTTP request and returns an HTTP response.
+	Do(req *http.Request) (response *http.Response, err error)
+
+	// CloseIdleConnections closes any idle connections in a "keep-alive" state.
+	CloseIdleConnections()
 }
 
-// Fetcher is responsible for fetching HTML content over HTTP using a proxy service.
+// Fetcher fetches data from URL using an HTTP client.
 type Fetcher struct {
-	client      HTTPClient        // HTTP client used to make requests.
-	maxBodySize int64             // Maximum size of the response body that can be read, in bytes.
-	proxy       *services.Service // Proxy service to manage HTTP client lifecycle.
+	httpClient  HttpClient // httpClient is a client used to send requests.
+	maxBodySize int64      // maxBodySize is a number of bytes to read from the response body.
 }
 
 // NewFetcher creates a new Fetcher instance with a configurable body size limit.
-func NewFetcher(proxy *services.Service, maxBodySize int64) (*Fetcher, error) {
-	c, err := proxy.HttpClient()
-	if err != nil {
-		return nil, fmt.Errorf("create fetcher: %w", err)
-	}
-	return &Fetcher{client: c, maxBodySize: maxBodySize, proxy: proxy}, nil
+func NewFetcher(httpClient HttpClient, maxBodySize int64) *Fetcher {
+	return &Fetcher{httpClient: httpClient, maxBodySize: maxBodySize}
 }
 
-// Fetch retrieves the HTML content from the specified URL.
-func (f *Fetcher) Fetch(ctx context.Context, url string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
-	if err != nil {
+// Fetch sends an HTTP GET request to the specified URL and returns the response body as a string.
+func (f *Fetcher) Fetch(ctx context.Context, url string) (result string, err error) {
+	var (
+		request  *http.Request
+		response *http.Response
+		body     []byte
+	)
+
+	if request, err = http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody); err != nil {
 		return "", fmt.Errorf("create request: %w", err)
 	}
 
-	resp, err := f.client.Do(req)
-	if err != nil {
+	if response, err = f.httpClient.Do(request); err != nil {
 		return "", fmt.Errorf("do request: %w", err)
 	}
 	defer func() {
-		if err = resp.Body.Close(); err != nil {
-			fmt.Printf("close response body error: %v", err)
+		if err = response.Body.Close(); err != nil {
+			fmt.Printf("close response body: %v", err)
 		}
 	}()
+	defer f.httpClient.CloseIdleConnections()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("http status: %d", resp.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("http status code: %d", response.StatusCode)
 	}
 
-	limitedReader := io.LimitReader(resp.Body, f.maxBodySize)
-	body, err := io.ReadAll(limitedReader)
-	if err != nil {
+	limitedReader := io.LimitReader(response.Body, f.maxBodySize)
+	if body, err = io.ReadAll(limitedReader); err != nil {
 		return "", fmt.Errorf("read response body: %w", err)
 	}
-	return string(body), nil
-}
 
-// Close releases resources used by the Fetcher.
-func (f *Fetcher) Close() {
-	if f.proxy != nil {
-		f.proxy.Close()
-	}
+	return string(body), nil
 }
